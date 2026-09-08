@@ -81,6 +81,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     const json = await response.json();
 
+    const isFreeModel = (model: any): boolean => {
+      const prompt = model?.pricing?.prompt;
+      const completion = model?.pricing?.completion;
+
+      if (prompt === undefined || prompt === null) {
+        return false;
+      }
+
+      return (
+        parseFloat(prompt) === 0 &&
+        (completion === undefined ||
+          completion === null ||
+          parseFloat(completion) === 0)
+      );
+    };
+
     const models: OpenAIModel[] = json.data
       .map((model: any) => {
         const knownModel = OpenAIModels[model.id as keyof typeof OpenAIModels];
@@ -92,6 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
           tokenLimit: knownModel
             ? knownModel.tokenLimit
             : MODEL_DEFAULT_TOKEN_LIMIT,
+          isFree: knownModel ? !!knownModel.isFree : isFreeModel(model),
         };
       })
       .sort((a: OpenAIModel, b: OpenAIModel) =>

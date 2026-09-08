@@ -3,6 +3,7 @@ export interface OpenAIModel {
   name: string;
   maxLength: number; // maximum length of a message
   tokenLimit: number;
+  isFree?: boolean; // whether the provider lists this model as free
 }
 
 export enum OpenAIModelID {

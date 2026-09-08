@@ -249,6 +249,11 @@ export const Chat: FC<Props> = memo(
                 <>
                   <div className="flex justify-center border border-b-neutral-300 bg-neutral-100 py-2 text-sm text-neutral-500 dark:border-none dark:bg-[#444654] dark:text-neutral-200">
                     {t('Model')}: {conversation.model.name}
+                    {conversation.model.isFree && (
+                      <span className="ml-2 rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-green-600 dark:text-green-400">
+                        {t('Free')}
+                      </span>
+                    )}
                     <button
                       className="ml-2 cursor-pointer hover:opacity-50"
                       onClick={handleSettings}
