@@ -3,6 +3,7 @@ import { KeyValuePair } from '@/types/data';
 import { SupportedExportFormats } from '@/types/export';
 import { Folder } from '@/types/folder';
 import { PluginKey } from '@/types/plugin';
+import { AIProvider } from '@/types/provider';
 import { IconFolderPlus, IconMessagesOff, IconPlus } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, useEffect, useState } from 'react';
@@ -16,7 +17,11 @@ interface Props {
   conversations: Conversation[];
   lightMode: 'light' | 'dark';
   selectedConversation: Conversation;
-  apiKey: string;
+  providers: AIProvider[];
+  selectedProviderId: string;
+  loadingProviderId: string | null;
+  loadErrorProviderId: string | null;
+  loadError: string | null;
   pluginKeys: PluginKey[];
   folders: Folder[];
   onCreateFolder: (name: string) => void;
@@ -30,7 +35,10 @@ interface Props {
     conversation: Conversation,
     data: KeyValuePair,
   ) => void;
-  onApiKeyChange: (apiKey: string) => void;
+  onUpdateProvider: (provider: AIProvider) => void;
+  onSelectProvider: (providerId: string) => void;
+  onAddProvider: (name: string, apiHost: string, apiKey: string) => void;
+  onRemoveProvider: (providerId: string) => void;
   onClearConversations: () => void;
   onExportConversations: () => void;
   onImportConversations: (data: SupportedExportFormats) => void;
@@ -43,7 +51,11 @@ export const Chatbar: FC<Props> = ({
   conversations,
   lightMode,
   selectedConversation,
-  apiKey,
+  providers,
+  selectedProviderId,
+  loadingProviderId,
+  loadErrorProviderId,
+  loadError,
   pluginKeys,
   folders,
   onCreateFolder,
@@ -54,7 +66,10 @@ export const Chatbar: FC<Props> = ({
   onSelectConversation,
   onDeleteConversation,
   onUpdateConversation,
-  onApiKeyChange,
+  onUpdateProvider,
+  onSelectProvider,
+  onAddProvider,
+  onRemoveProvider,
   onClearConversations,
   onExportConversations,
   onImportConversations,
@@ -197,11 +212,18 @@ export const Chatbar: FC<Props> = ({
 
       <ChatbarSettings
         lightMode={lightMode}
-        apiKey={apiKey}
+        providers={providers}
+        selectedProviderId={selectedProviderId}
+        loadingProviderId={loadingProviderId}
+        loadErrorProviderId={loadErrorProviderId}
+        loadError={loadError}
         pluginKeys={pluginKeys}
         conversationsCount={conversations.length}
         onToggleLightMode={onToggleLightMode}
-        onApiKeyChange={onApiKeyChange}
+        onUpdateProvider={onUpdateProvider}
+        onSelectProvider={onSelectProvider}
+        onAddProvider={onAddProvider}
+        onRemoveProvider={onRemoveProvider}
         onClearConversations={onClearConversations}
         onExportConversations={onExportConversations}
         onImportConversations={onImportConversations}

@@ -1,23 +1,63 @@
-import { OpenAIModel, OpenAIModelID, OpenAIModels } from '@/types/openai';
-import { OPENAI_API_HOST } from '@/utils/app/const';
+import { OpenAIModel, OpenAIModels } from '@/types/openai';
+import {
+  AIProvider,
+  getProviderApiHost,
+  getProviderEnvKey,
+  MODEL_DEFAULT_MAX_LENGTH,
+  MODEL_DEFAULT_TOKEN_LIMIT,
+} from '@/types/provider';
 
 export const config = {
   runtime: 'edge',
 };
 
+const isAllowedProviderHost = (provider: {
+  id: string;
+  apiHost: string;
+}): boolean => {
+  const apiHost = getProviderApiHost(provider);
+
+  try {
+    const url = new URL(apiHost);
+    const isLocal =
+      url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+
+    return url.protocol === 'https:' || (url.protocol === 'http:' && isLocal);
+  } catch {
+    return false;
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   try {
-    const { key } = (await req.json()) as {
-      key: string;
-    };
+    const { provider } = (await req.json()) as { provider: AIProvider };
 
-    const response = await fetch(`${OPENAI_API_HOST}/v1/models`, {
+    if (!provider?.id) {
+      return new Response(
+        JSON.stringify({ error: { message: 'Missing provider configuration.' } }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!isAllowedProviderHost(provider)) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message:
+              'Provider base URL must use https (http is only allowed for localhost).',
+          },
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const apiHost = getProviderApiHost(provider);
+    const apiKey = provider.apiKey || getProviderEnvKey(provider.id);
+
+    const response = await fetch(`${apiHost}/models`, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
-        ...(process.env.OPENAI_ORGANIZATION && {
-          'OpenAI-Organization': process.env.OPENAI_ORGANIZATION,
-        })
+        Authorization: `Bearer ${apiKey ? apiKey : ''}`,
       },
     });
 
@@ -25,40 +65,46 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({
           error: {
-            message:
-              'Invalid API key. Please check your OpenAI API key and try again.',
+            message: `Invalid API key for ${provider.name}. Please check your API key and try again.`,
           },
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     } else if (response.status !== 200) {
       console.error(
-        `OpenAI API returned an error ${
+        `${provider.name} API returned an error ${
           response.status
         }: ${await response.text()}`,
       );
-      throw new Error('OpenAI API returned an error');
+      throw new Error(`${provider.name} API returned an error`);
     }
 
     const json = await response.json();
 
     const models: OpenAIModel[] = json.data
       .map((model: any) => {
-        for (const [key, value] of Object.entries(OpenAIModelID)) {
-          if (value === model.id) {
-            return {
-              id: model.id,
-              name: OpenAIModels[value].name,
-            };
-          }
-        }
+        const knownModel = OpenAIModels[model.id as keyof typeof OpenAIModels];
+
+        return {
+          id: model.id,
+          name: knownModel ? knownModel.name : model.id,
+          maxLength: knownModel ? knownModel.maxLength : MODEL_DEFAULT_MAX_LENGTH,
+          tokenLimit: knownModel
+            ? knownModel.tokenLimit
+            : MODEL_DEFAULT_TOKEN_LIMIT,
+        };
       })
-      .filter(Boolean);
+      .sort((a: OpenAIModel, b: OpenAIModel) =>
+        a.name.localeCompare(b.name),
+      );
 
     return new Response(JSON.stringify(models), { status: 200 });
   } catch (error) {
     console.error(error);
-    return new Response('Error', { status: 500 });
+    return new Response(
+      JSON.stringify({ error: { message: 'Failed to load models.' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 };
 

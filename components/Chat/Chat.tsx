@@ -1,7 +1,7 @@
 import { Conversation, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
-import { OpenAIModel, OpenAIModelID } from '@/types/openai';
+import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
 import { throttle } from '@/utils';
@@ -27,9 +27,9 @@ import { SystemPrompt } from './SystemPrompt';
 interface Props {
   conversation: Conversation;
   models: OpenAIModel[];
-  apiKey: string;
-  serverSideApiKeyIsSet: boolean;
-  defaultModelId: OpenAIModelID;
+  hasProviderKey: boolean;
+  providerName: string;
+  providerUsageUrl?: string;
   messageIsStreaming: boolean;
   modelError: ErrorMessage | null;
   loading: boolean;
@@ -51,9 +51,9 @@ export const Chat: FC<Props> = memo(
   ({
     conversation,
     models,
-    apiKey,
-    serverSideApiKeyIsSet,
-    defaultModelId,
+    hasProviderKey,
+    providerName,
+    providerUsageUrl,
     messageIsStreaming,
     modelError,
     loading,
@@ -154,7 +154,7 @@ export const Chat: FC<Props> = memo(
 
     return (
       <div className="relative flex-1 overflow-hidden bg-white dark:bg-[#343541]">
-        {!(apiKey || serverSideApiKeyIsSet) ? (
+        {!hasProviderKey ? (
           <div className="mx-auto flex h-full w-[300px] flex-col justify-center space-y-6 sm:w-[600px]">
             <div className="text-center text-4xl font-bold text-black dark:text-white">
               Welcome to Chatbot UI
@@ -167,21 +167,21 @@ export const Chat: FC<Props> = memo(
             </div>
             <div className="text-center text-gray-500 dark:text-gray-400">
               <div className="mb-2">
-                Chatbot UI allows you to plug in your API key to use this UI
-                with their API.
+                Chatbot UI allows you to plug in your API keys to use this UI
+                with any OpenAI-compatible provider.
               </div>
               <div className="mb-2">
                 It is <span className="italic">only</span> used to communicate
-                with their API.
+                with the provider&apos;s API.
               </div>
               <div className="mb-2">
                 {t(
-                  'Please set your OpenAI API key in the bottom left of the sidebar.',
+                  'Please set your API keys in the bottom left of the sidebar.',
                 )}
               </div>
               <div>
                 {t(
-                  "If you don't have an OpenAI API key, you can get one here: ",
+                  "If you don't have an API key, you can get one from your provider (e.g. openai.com, openrouter.ai): ",
                 )}
                 <a
                   href="https://platform.openai.com/account/api-keys"
@@ -189,7 +189,7 @@ export const Chat: FC<Props> = memo(
                   rel="noreferrer"
                   className="text-blue-500 hover:underline"
                 >
-                  openai.com
+                  providers
                 </a>
               </div>
             </div>
@@ -221,7 +221,8 @@ export const Chat: FC<Props> = memo(
                         <ModelSelect
                           model={conversation.model}
                           models={models}
-                          defaultModelId={defaultModelId}
+                          providerName={providerName}
+                          usageUrl={providerUsageUrl}
                           onModelChange={(model) =>
                             onUpdateConversation(conversation, {
                               key: 'model',
@@ -267,7 +268,8 @@ export const Chat: FC<Props> = memo(
                         <ModelSelect
                           model={conversation.model}
                           models={models}
-                          defaultModelId={defaultModelId}
+                          providerName={providerName}
+                          usageUrl={providerUsageUrl}
                           onModelChange={(model) =>
                             onUpdateConversation(conversation, {
                               key: 'model',

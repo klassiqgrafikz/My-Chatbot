@@ -1,4 +1,5 @@
 import { OpenAIModel } from './openai';
+import { AIProvider } from './provider';
 
 export interface Message {
   role: Role;
@@ -12,6 +13,7 @@ export interface ChatBody {
   messages: Message[];
   key: string;
   prompt: string;
+  provider: AIProvider;
 }
 
 export interface Conversation {
@@ -21,4 +23,5 @@ export interface Conversation {
   model: OpenAIModel;
   prompt: string;
   folderId: string | null;
+  providerId: string;
 }

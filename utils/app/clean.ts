@@ -26,6 +26,14 @@ export const cleanSelectedConversation = (conversation: Conversation) => {
     };
   }
 
+  // check for provider on each conversation
+  if (!updatedConversation.providerId) {
+    updatedConversation = {
+      ...updatedConversation,
+      providerId: updatedConversation.providerId || 'openai',
+    };
+  }
+
   if (!updatedConversation.folderId) {
     updatedConversation = {
       ...updatedConversation,
@@ -55,6 +63,10 @@ export const cleanConversationHistory = (history: any[]): Conversation[] => {
 
       if (!conversation.prompt) {
         conversation.prompt = DEFAULT_SYSTEM_PROMPT;
+      }
+
+      if (!conversation.providerId) {
+        conversation.providerId = 'openai';
       }
 
       if (!conversation.folderId) {

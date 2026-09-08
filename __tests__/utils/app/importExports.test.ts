@@ -102,6 +102,7 @@ describe('cleanData Functions', () => {
             model: OpenAIModels[OpenAIModelID.GPT_3_5],
             prompt: DEFAULT_SYSTEM_PROMPT,
             folderId: null,
+            providerId: 'openai',
           },
         ],
         folders: [],
@@ -157,6 +158,7 @@ describe('cleanData Functions', () => {
             model: OpenAIModels[OpenAIModelID.GPT_3_5],
             prompt: DEFAULT_SYSTEM_PROMPT,
             folderId: null,
+            providerId: 'openai',
           },
         ],
         folders: [

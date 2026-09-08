@@ -1,11 +1,15 @@
 import { Message } from '@/types/chat';
 import { OpenAIModel } from '@/types/openai';
 import {
+  getProviderApiHost,
+  getProviderEnvKey,
+} from '@/types/provider';
+import { AIProvider } from '@/types/provider';
+import {
   createParser,
   ParsedEvent,
   ReconnectInterval,
 } from 'eventsource-parser';
-import { OPENAI_API_HOST } from '../app/const';
 
 export class OpenAIError extends Error {
   type: string;
@@ -21,19 +25,48 @@ export class OpenAIError extends Error {
   }
 }
 
+const isOpenAIHost = (apiHost: string) => {
+  try {
+    return new URL(apiHost).hostname.endsWith('api.openai.com');
+  } catch {
+    return false;
+  }
+};
+
 export const OpenAIStream = async (
   model: OpenAIModel,
   systemPrompt: string,
   key: string,
   messages: Message[],
+  provider: AIProvider,
 ) => {
-  const res = await fetch(`${OPENAI_API_HOST}/v1/chat/completions`, {
+  const apiHost = getProviderApiHost(provider);
+  const apiKey = key || provider.apiKey || getProviderEnvKey(provider.id);
+
+  if (!apiKey) {
+    throw new OpenAIError(
+      `No API key provided for ${provider.name}. Add your API key in the app or set the ${provider.id.toUpperCase()}_API_KEY server environment variable.`,
+      'invalid_request_error',
+      '',
+      '',
+    );
+  }
+
+  const extraHeaders: Record<string, string> = {};
+
+  if (provider.id === 'openrouter') {
+    extraHeaders['HTTP-Referer'] = 'https://chatbot-ui.vercel.app';
+    extraHeaders['X-Title'] = 'Chatbot UI';
+  }
+
+  const res = await fetch(`${apiHost}/chat/completions`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
-      ...(process.env.OPENAI_ORGANIZATION && {
-        'OpenAI-Organization': process.env.OPENAI_ORGANIZATION,
-      }),
+      Authorization: `Bearer ${apiKey}`,
+      ...(isOpenAIHost(apiHost) && process.env.OPENAI_ORGANIZATION
+        ? { 'OpenAI-Organization': process.env.OPENAI_ORGANIZATION }
+        : {}),
+      ...extraHeaders,
     },
     method: 'POST',
     body: JSON.stringify({

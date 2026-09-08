@@ -15,6 +15,7 @@ import {
 } from '@/types/openai';
 import { Plugin, PluginKey } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
+import { AIProvider, DEFAULT_PROVIDERS } from '@/types/provider';
 import { getEndpoint } from '@/utils/app/api';
 import {
   cleanConversationHistory,
@@ -53,15 +54,19 @@ const Home: React.FC<HomeProps> = ({
 
   // STATE ----------------------------------------------
 
-  const [apiKey, setApiKey] = useState<string>('');
+  const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(
+    DEFAULT_PROVIDERS[0].id,
+  );
+  const [providerFetch, setProviderFetch] = useState<{
+    providerId: string | null;
+    loading: boolean;
+    error: string | null;
+  }>({ providerId: null, loading: false, error: null });
   const [pluginKeys, setPluginKeys] = useState<PluginKey[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [messageIsStreaming, setMessageIsStreaming] = useState<boolean>(false);
-
-  const [modelError, setModelError] = useState<ErrorMessage | null>(null);
-
-  const [models, setModels] = useState<OpenAIModel[]>([]);
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
@@ -78,6 +83,7 @@ const Home: React.FC<HomeProps> = ({
   // REFS ----------------------------------------------
 
   const stopConversationRef = useRef<boolean>(false);
+  const fetchedProvidersRef = useRef<Set<string>>(new Set());
 
   // FETCH RESPONSE ----------------------------------------------
 
@@ -87,6 +93,15 @@ const Home: React.FC<HomeProps> = ({
     plugin: Plugin | null = null,
   ) => {
     if (selectedConversation) {
+      const activeProvider =
+        providers.find(
+          (p) =>
+            p.id ===
+            (selectedConversation.providerId || selectedProviderId),
+        ) ||
+        providers.find((p) => p.id === selectedProviderId) ||
+        providers[0];
+
       let updatedConversation: Conversation;
 
       if (deleteCount) {
@@ -110,11 +125,25 @@ const Home: React.FC<HomeProps> = ({
       setLoading(true);
       setMessageIsStreaming(true);
 
+      if (!activeProvider || !activeProvider.apiKey) {
+        if (!(activeProvider?.id === 'openai' && serverSideApiKeyIsSet)) {
+          setLoading(false);
+          setMessageIsStreaming(false);
+          toast.error(
+            t(
+              'No API key for the selected provider. Set your API key in the bottom left of the sidebar.',
+            ),
+          );
+          return;
+        }
+      }
+
       const chatBody: ChatBody = {
         model: updatedConversation.model,
         messages: updatedConversation.messages,
-        key: apiKey,
+        key: activeProvider?.apiKey || '',
         prompt: updatedConversation.prompt,
+        provider: activeProvider as ChatBody['provider'],
       };
 
       const endpoint = getEndpoint(plugin);
@@ -293,17 +322,13 @@ const Home: React.FC<HomeProps> = ({
 
   // FETCH MODELS ----------------------------------------------
 
-  const fetchModels = async (key: string) => {
-    const error = {
-      title: t('Error fetching models.'),
-      code: null,
-      messageLines: [
-        t(
-          'Make sure your OpenAI API key is set in the bottom left of the sidebar.',
-        ),
-        t('If you completed this step, OpenAI may be experiencing issues.'),
-      ],
-    } as ErrorMessage;
+  const updateProviders = (next: AIProvider[]) => {
+    setProviders(next);
+    localStorage.setItem('providers', JSON.stringify(next));
+  };
+
+  const fetchModels = async (provider: AIProvider) => {
+    setProviderFetch({ providerId: provider.id, loading: true, error: null });
 
     const response = await fetch('/api/models', {
       method: 'POST',
@@ -311,31 +336,125 @@ const Home: React.FC<HomeProps> = ({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        key,
+        provider,
       }),
     });
 
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch (e) {}
+
     if (!response.ok) {
-      try {
-        const data = await response.json();
-        Object.assign(error, {
-          code: data.error?.code,
-          messageLines: [data.error?.message],
-        });
-      } catch (e) {}
-      setModelError(error);
+      setProviderFetch({
+        providerId: provider.id,
+        loading: false,
+        error:
+          data?.error?.message ||
+          'Failed to load models. Please check your API key and try again.',
+      });
       return;
     }
 
-    const data = await response.json();
+    setProviders((prev) => {
+      const next = prev.map((p) =>
+        p.id === provider.id ? { ...p, models: data } : p,
+      );
+      localStorage.setItem('providers', JSON.stringify(next));
+      return next;
+    });
 
-    if (!data) {
-      setModelError(error);
+    fetchedProvidersRef.current.add(provider.id);
+    setProviderFetch({ providerId: provider.id, loading: false, error: null });
+  };
+
+  const providerHasServerKey = (provider: AIProvider) =>
+    provider.id === 'openai' && serverSideApiKeyIsSet;
+
+  const handleUpdateProvider = (provider: AIProvider) => {
+    const prev = providers.find((p) => p.id === provider.id);
+    const keyChanged = prev ? prev.apiKey !== provider.apiKey : true;
+    const hostChanged = prev ? prev.apiHost !== provider.apiHost : true;
+
+    let updated = provider;
+    if ((keyChanged || hostChanged) && provider.models.length > 0) {
+      updated = { ...provider, models: [] };
+    }
+
+    updateProviders(
+      providers.map((p) => (p.id === provider.id ? updated : p)),
+    );
+
+    if (keyChanged || hostChanged) {
+      fetchedProvidersRef.current.delete(provider.id);
+    }
+
+    if (updated.apiKey && updated.models.length === 0) {
+      fetchModels(updated);
+    }
+  };
+
+  const handleSelectProvider = (providerId: string) => {
+    if (!providers.some((p) => p.id === providerId)) {
       return;
     }
 
-    setModels(data);
-    setModelError(null);
+    setSelectedProviderId(providerId);
+    localStorage.setItem('selectedProviderId', providerId);
+
+    if (selectedConversation) {
+      handleUpdateConversation(selectedConversation, {
+        key: 'providerId',
+        value: providerId,
+      });
+    }
+
+    const provider = providers.find((p) => p.id === providerId);
+
+    if (
+      provider &&
+      (provider.apiKey || providerHasServerKey(provider)) &&
+      provider.models.length === 0
+    ) {
+      fetchModels(provider);
+    }
+  };
+
+  const handleAddProvider = (
+    name: string,
+    apiHost: string,
+    apiKey: string,
+  ) => {
+    const provider: AIProvider = {
+      id: `custom-${uuidv4()}`,
+      name,
+      apiHost,
+      apiKey,
+      isCustom: true,
+      models: [],
+    };
+
+    updateProviders([...providers, provider]);
+
+    if (apiKey) {
+      fetchModels(provider);
+    }
+  };
+
+  const handleRemoveProvider = (providerId: string) => {
+    const provider = providers.find((p) => p.id === providerId);
+
+    if (!provider || !provider.isCustom) {
+      return;
+    }
+
+    const next = providers.filter((p) => p.id !== providerId);
+    updateProviders(next);
+    fetchedProvidersRef.current.delete(providerId);
+
+    if (selectedProviderId === providerId) {
+      handleSelectProvider(next[0]?.id || DEFAULT_PROVIDERS[0].id);
+    }
   };
 
   // BASIC HANDLERS --------------------------------------------
@@ -343,11 +462,6 @@ const Home: React.FC<HomeProps> = ({
   const handleLightMode = (mode: 'dark' | 'light') => {
     setLightMode(mode);
     localStorage.setItem('theme', mode);
-  };
-
-  const handleApiKeyChange = (apiKey: string) => {
-    setApiKey(apiKey);
-    localStorage.setItem('apiKey', apiKey);
   };
 
   const handlePluginKeyChange = (pluginKey: PluginKey) => {
@@ -415,6 +529,14 @@ const Home: React.FC<HomeProps> = ({
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     saveConversation(conversation);
+
+    if (
+      conversation.providerId &&
+      providers.some((p) => p.id === conversation.providerId)
+    ) {
+      setSelectedProviderId(conversation.providerId);
+      localStorage.setItem('selectedProviderId', conversation.providerId);
+    }
   };
 
   // FOLDER OPERATIONS  --------------------------------------------
@@ -497,6 +619,7 @@ const Home: React.FC<HomeProps> = ({
       },
       prompt: DEFAULT_SYSTEM_PROMPT,
       folderId: null,
+      providerId: selectedProviderId,
     };
 
     const updatedConversations = [...conversations, newConversation];
@@ -530,6 +653,7 @@ const Home: React.FC<HomeProps> = ({
         model: OpenAIModels[defaultModelId],
         prompt: DEFAULT_SYSTEM_PROMPT,
         folderId: null,
+        providerId: selectedProviderId,
       });
       localStorage.removeItem('selectedConversation');
     }
@@ -564,6 +688,7 @@ const Home: React.FC<HomeProps> = ({
       model: OpenAIModels[defaultModelId],
       prompt: DEFAULT_SYSTEM_PROMPT,
       folderId: null,
+      providerId: selectedProviderId,
     });
     localStorage.removeItem('selectedConversation');
 
@@ -652,10 +777,27 @@ const Home: React.FC<HomeProps> = ({
   }, [selectedConversation]);
 
   useEffect(() => {
-    if (apiKey) {
-      fetchModels(apiKey);
+    const provider = providers.find((p) => p.id === selectedProviderId);
+    if (!provider) {
+      return;
     }
-  }, [apiKey]);
+
+    const hasKey =
+      !!provider.apiKey || providerHasServerKey(provider);
+    const isFetching =
+      providerFetch.providerId === provider.id && providerFetch.loading;
+
+    if (
+      hasKey &&
+      provider.models.length === 0 &&
+      !fetchedProvidersRef.current.has(provider.id) &&
+      !isFetching
+    ) {
+      fetchedProvidersRef.current.add(provider.id);
+      fetchModels(provider);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProviderId, providers, providerFetch.loading]);
 
   // ON LOAD --------------------------------------------
 
@@ -665,13 +807,37 @@ const Home: React.FC<HomeProps> = ({
       setLightMode(theme as 'dark' | 'light');
     }
 
-    const apiKey = localStorage.getItem('apiKey');
-    if (apiKey) {
-      setApiKey(apiKey);
-      fetchModels(apiKey);
-    } else if (!serverSideApiKeyIsSet) {
-      fetchModels('');
+    let loadedProviders: AIProvider[] = [];
+    const storedProviders = localStorage.getItem('providers');
+    if (storedProviders) {
+      try {
+        const parsed = JSON.parse(storedProviders);
+        if (Array.isArray(parsed) && parsed.length) {
+          loadedProviders = parsed;
+        }
+      } catch (e) {}
     }
+    if (loadedProviders.length === 0) {
+      loadedProviders = DEFAULT_PROVIDERS.map((p) => ({ ...p, models: [] }));
+    }
+
+    const legacyApiKey = localStorage.getItem('apiKey');
+    if (legacyApiKey) {
+      loadedProviders = loadedProviders.map((p) =>
+        p.id === 'openai' ? { ...p, apiKey: legacyApiKey } : p,
+      );
+      localStorage.removeItem('apiKey');
+    }
+
+    let storedSelectedProviderId =
+      localStorage.getItem('selectedProviderId') || loadedProviders[0].id;
+    if (!loadedProviders.some((p) => p.id === storedSelectedProviderId)) {
+      storedSelectedProviderId = loadedProviders[0].id;
+    }
+
+    localStorage.setItem('providers', JSON.stringify(loadedProviders));
+    setProviders(loadedProviders);
+    setSelectedProviderId(storedSelectedProviderId);
 
     const pluginKeys = localStorage.getItem('pluginKeys');
     if (serverSidePluginKeysSet) {
@@ -731,9 +897,43 @@ const Home: React.FC<HomeProps> = ({
         model: OpenAIModels[defaultModelId],
         prompt: DEFAULT_SYSTEM_PROMPT,
         folderId: null,
+        providerId: storedSelectedProviderId,
       });
     }
   }, [serverSideApiKeyIsSet]);
+
+  // DERIVED ----------------------------------------------
+
+  const selectedProvider =
+    providers.find((p) => p.id === selectedProviderId) || providers[0];
+  const activeProvider =
+    providers.find(
+      (p) => p.id === (selectedConversation?.providerId || selectedProviderId),
+    ) ||
+    selectedProvider;
+  const hasProviderKey =
+    providers.some((p) => p.apiKey) || serverSideApiKeyIsSet;
+  const models: OpenAIModel[] = activeProvider?.models || [];
+
+  const isSelectedFetchError =
+    providerFetch.providerId === selectedProviderId && !!providerFetch.error;
+  const modelError: ErrorMessage | null = isSelectedFetchError
+    ? ({
+        title: t('Error fetching models.'),
+        code: null,
+        messageLines: [
+          providerFetch.error || '',
+          t(
+            'If you completed this step, the provider may be experiencing issues.',
+          ),
+        ],
+      } as ErrorMessage)
+    : null;
+
+  const providerUsageUrl =
+    activeProvider?.id === 'openai'
+      ? 'https://platform.openai.com/account/usage'
+      : undefined;
 
   return (
     <>
@@ -765,7 +965,15 @@ const Home: React.FC<HomeProps> = ({
                   conversations={conversations}
                   lightMode={lightMode}
                   selectedConversation={selectedConversation}
-                  apiKey={apiKey}
+                  providers={providers}
+                  selectedProviderId={selectedProviderId}
+                  loadingProviderId={
+                    providerFetch.loading ? providerFetch.providerId : null
+                  }
+                  loadErrorProviderId={
+                    providerFetch.error ? providerFetch.providerId : null
+                  }
+                  loadError={providerFetch.error}
                   pluginKeys={pluginKeys}
                   folders={folders.filter((folder) => folder.type === 'chat')}
                   onToggleLightMode={handleLightMode}
@@ -776,7 +984,10 @@ const Home: React.FC<HomeProps> = ({
                   onSelectConversation={handleSelectConversation}
                   onDeleteConversation={handleDeleteConversation}
                   onUpdateConversation={handleUpdateConversation}
-                  onApiKeyChange={handleApiKeyChange}
+                  onUpdateProvider={handleUpdateProvider}
+                  onSelectProvider={handleSelectProvider}
+                  onAddProvider={handleAddProvider}
+                  onRemoveProvider={handleRemoveProvider}
                   onClearConversations={handleClearConversations}
                   onExportConversations={handleExportData}
                   onImportConversations={handleImportConversations}
@@ -808,9 +1019,9 @@ const Home: React.FC<HomeProps> = ({
               <Chat
                 conversation={selectedConversation}
                 messageIsStreaming={messageIsStreaming}
-                apiKey={apiKey}
-                serverSideApiKeyIsSet={serverSideApiKeyIsSet}
-                defaultModelId={defaultModelId}
+                hasProviderKey={hasProviderKey}
+                providerName={activeProvider?.name || 'AI'}
+                providerUsageUrl={providerUsageUrl}
                 modelError={modelError}
                 models={models}
                 loading={loading}
