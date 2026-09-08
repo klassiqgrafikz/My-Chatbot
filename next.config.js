@@ -1,3 +1,4 @@
+const webpack = require('webpack');
 const { i18n } = require('./next-i18next.config');
 
 /** @type {import('next').NextConfig} */
@@ -10,6 +11,14 @@ const nextConfig = {
       asyncWebAssembly: true,
       layers: true,
     };
+
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        PACKAGE_VERSION: JSON.stringify(
+          require('mathjax-full/package.json').version,
+        ),
+      }),
+    );
 
     return config;
   },

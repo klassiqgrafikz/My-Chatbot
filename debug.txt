@@ -1,0 +1,33 @@
+main-f6414acab6dce0b8.js:1 ReferenceError: require is not defined
+    at eval (eval at <anonymous> (244-04056a570f423956.js:6:6073), <anonymous>:1:1)
+    at 244-04056a570f423956.js:6:6073
+    at 73132 (244-04056a570f423956.js:6:6201)
+    at i (webpack-59c5c889f52620d6.js:1:142)
+    at 90786 (244-04056a570f423956.js:6:454373)
+    at i (webpack-59c5c889f52620d6.js:1:142)
+    at 69232 (244-04056a570f423956.js:52:120579)
+    at i (webpack-59c5c889f52620d6.js:1:142)
+    at 10420 (index-c294952de28f6dd2.js:1:11458)
+    at i (webpack-59c5c889f52620d6.js:1:142)
+K @ main-f6414acab6dce0b8.js:1
+main-f6414acab6dce0b8.js:1 A client-side exception has occurred, see here for more info: https://nextjs.org/docs/messages/client-side-exception-occurred
+K @ main-f6414acab6dce0b8.js:1
+framework-73b8966a3c579ab0.js:9 Uncaught Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at lh (framework-73b8966a3c579ab0.js:9:46424)
+    at i (framework-73b8966a3c579ab0.js:9:121161)
+    at oO (framework-73b8966a3c579ab0.js:9:99114)
+    at framework-73b8966a3c579ab0.js:9:98981
+    at oF (framework-73b8966a3c579ab0.js:9:98988)
+    at oS (framework-73b8966a3c579ab0.js:9:94027)
+    at x (framework-73b8966a3c579ab0.js:33:1373)
+    at MessagePort.T (framework-73b8966a3c579ab0.js:33:1903)
+framework-73b8966a3c579ab0.js:9 Uncaught Error: Minified React error #423; visit https://reactjs.org/docs/error-decoder.html?invariant=423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at i (framework-73b8966a3c579ab0.js:9:120830)
+    at oO (framework-73b8966a3c579ab0.js:9:99114)
+    at framework-73b8966a3c579ab0.js:9:98981
+    at oF (framework-73b8966a3c579ab0.js:9:98988)
+    at ox (framework-73b8966a3c579ab0.js:9:95740)
+    at oS (framework-73b8966a3c579ab0.js:9:94295)
+    at x (framework-73b8966a3c579ab0.js:33:1373)
+    at MessagePort.T (framework-73b8966a3c579ab0.js:33:1903)
+(index):1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
