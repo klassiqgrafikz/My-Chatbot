@@ -661,13 +661,11 @@ const Home: React.FC<HomeProps> = ({
     }
 
     const apiKey = localStorage.getItem('apiKey');
-    if (serverSideApiKeyIsSet) {
-      fetchModels('');
-      setApiKey('');
-      localStorage.removeItem('apiKey');
-    } else if (apiKey) {
+    if (apiKey) {
       setApiKey(apiKey);
       fetchModels(apiKey);
+    } else if (!serverSideApiKeyIsSet) {
+      fetchModels('');
     }
 
     const pluginKeys = localStorage.getItem('pluginKeys');
