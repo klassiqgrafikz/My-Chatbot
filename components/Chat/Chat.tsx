@@ -45,6 +45,9 @@ interface Props {
   ) => void;
   onEditMessage: (message: Message, messageIndex: number) => void;
   stopConversationRef: MutableRefObject<boolean>;
+  onStop: () => void;
+  showContinue: boolean;
+  onContinue: () => void;
 }
 
 export const Chat: FC<Props> = memo(
@@ -62,6 +65,9 @@ export const Chat: FC<Props> = memo(
     onUpdateConversation,
     onEditMessage,
     stopConversationRef,
+    onStop,
+    showContinue,
+    onContinue,
   }) => {
     const { t } = useTranslation('chat');
     const [currentMessage, setCurrentMessage] = useState<Message>();
@@ -312,6 +318,9 @@ export const Chat: FC<Props> = memo(
               conversationIsEmpty={conversation.messages.length === 0}
               model={conversation.model}
               prompts={prompts}
+              onStop={onStop}
+              showContinue={showContinue}
+              onContinue={onContinue}
               onSend={(message, plugin) => {
                 setCurrentMessage(message);
                 onSend(message, 0, plugin);

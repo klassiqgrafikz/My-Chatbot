@@ -5,6 +5,7 @@ import {
   getProviderEnvKey,
 } from '@/types/provider';
 import { AIProvider } from '@/types/provider';
+import { CONTINUE_SENTINEL } from '@/utils/app/const';
 import {
   createParser,
   ParsedEvent,
@@ -39,6 +40,7 @@ export const OpenAIStream = async (
   key: string,
   messages: Message[],
   provider: AIProvider,
+  maxTokens = 1000,
 ) => {
   const apiHost = getProviderApiHost(provider);
   const apiKey = key || provider.apiKey || getProviderEnvKey(provider.id);
@@ -78,7 +80,7 @@ export const OpenAIStream = async (
         },
         ...messages,
       ],
-      max_tokens: 1000,
+      max_tokens: maxTokens,
       temperature: 1,
       stream: true,
     }),
@@ -119,8 +121,18 @@ export const OpenAIStream = async (
           try {
             const json = JSON.parse(data);
             const text = json.choices[0].delta.content;
-            const queue = encoder.encode(text);
-            controller.enqueue(queue);
+            if (text) {
+              const queue = encoder.encode(text);
+              controller.enqueue(queue);
+            }
+
+            const finishReason =
+              json.choices[0]?.finish_reason ||
+              json.choices[0]?.delta?.finish_reason;
+
+            if (finishReason === 'length') {
+              controller.enqueue(encoder.encode(CONTINUE_SENTINEL));
+            }
           } catch (e) {
             controller.error(e);
           }

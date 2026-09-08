@@ -5,6 +5,7 @@ import { Prompt } from '@/types/prompt';
 import {
   IconBolt,
   IconBrandGoogle,
+  IconPlayerPlay,
   IconPlayerStop,
   IconRepeat,
   IconSend,
@@ -30,6 +31,9 @@ interface Props {
   prompts: Prompt[];
   onSend: (message: Message, plugin: Plugin | null) => void;
   onRegenerate: () => void;
+  onStop: () => void;
+  showContinue: boolean;
+  onContinue: () => void;
   stopConversationRef: MutableRefObject<boolean>;
   textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
 }
@@ -41,6 +45,9 @@ export const ChatInput: FC<Props> = ({
   prompts,
   onSend,
   onRegenerate,
+  onStop,
+  showContinue,
+  onContinue,
   stopConversationRef,
   textareaRef,
 }) => {
@@ -100,6 +107,7 @@ export const ChatInput: FC<Props> = ({
   };
 
   const handleStopConversation = () => {
+    onStop();
     stopConversationRef.current = true;
     setTimeout(() => {
       stopConversationRef.current = false;
@@ -261,7 +269,16 @@ export const ChatInput: FC<Props> = ({
           </button>
         )}
 
-        {!messageIsStreaming && !conversationIsEmpty && (
+        {!messageIsStreaming && !conversationIsEmpty && showContinue && (
+          <button
+            className="absolute top-0 left-0 right-0 mx-auto mb-3 flex w-fit items-center gap-3 rounded border border-neutral-200 bg-white py-2 px-4 text-black hover:opacity-50 dark:border-neutral-600 dark:bg-[#343541] dark:text-white md:mb-0 md:mt-2"
+            onClick={onContinue}
+          >
+            <IconPlayerPlay size={16} /> {t('Continue generating')}
+          </button>
+        )}
+
+        {!messageIsStreaming && !conversationIsEmpty && !showContinue && (
           <button
             className="absolute top-0 left-0 right-0 mx-auto mb-3 flex w-fit items-center gap-3 rounded border border-neutral-200 bg-white py-2 px-4 text-black hover:opacity-50 dark:border-neutral-600 dark:bg-[#343541] dark:text-white md:mb-0 md:mt-2"
             onClick={onRegenerate}

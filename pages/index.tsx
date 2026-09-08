@@ -21,7 +21,7 @@ import {
   cleanConversationHistory,
   cleanSelectedConversation,
 } from '@/utils/app/clean';
-import { DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
+import { CONTINUE_SENTINEL, DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
 import {
   saveConversation,
   saveConversations,
@@ -67,6 +67,7 @@ const Home: React.FC<HomeProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [messageIsStreaming, setMessageIsStreaming] = useState<boolean>(false);
+  const [continueEnabled, setContinueEnabled] = useState<boolean>(false);
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
@@ -84,86 +85,106 @@ const Home: React.FC<HomeProps> = ({
 
   const stopConversationRef = useRef<boolean>(false);
   const fetchedProvidersRef = useRef<Set<string>>(new Set());
+  const activeControllerRef = useRef<AbortController | null>(null);
+  const conversationResetRef = useRef<number>(0);
 
   // FETCH RESPONSE ----------------------------------------------
 
   const handleSend = async (
-    message: Message,
+    message?: Message,
     deleteCount = 0,
     plugin: Plugin | null = null,
+    isContinue = false,
   ) => {
-    if (selectedConversation) {
-      const activeProvider =
-        providers.find(
-          (p) =>
-            p.id ===
-            (selectedConversation.providerId || selectedProviderId),
-        ) ||
-        providers.find((p) => p.id === selectedProviderId) ||
-        providers[0];
+    if (!selectedConversation) {
+      return;
+    }
 
-      let updatedConversation: Conversation;
+    const resetToken = conversationResetRef.current;
+    const conversationIdAtSend = selectedConversation.id;
 
-      if (deleteCount) {
-        const updatedMessages = [...selectedConversation.messages];
-        for (let i = 0; i < deleteCount; i++) {
-          updatedMessages.pop();
-        }
+    const activeProvider =
+      providers.find(
+        (p) =>
+          p.id ===
+          (selectedConversation.providerId || selectedProviderId),
+      ) ||
+      providers.find((p) => p.id === selectedProviderId) ||
+      providers[0];
 
-        updatedConversation = {
-          ...selectedConversation,
-          messages: [...updatedMessages, message],
-        };
-      } else {
-        updatedConversation = {
-          ...selectedConversation,
-          messages: [...selectedConversation.messages, message],
-        };
+    let updatedConversation: Conversation;
+
+    if (isContinue) {
+      updatedConversation = selectedConversation;
+    } else if (deleteCount) {
+      const updatedMessages = [...selectedConversation.messages];
+      for (let i = 0; i < deleteCount; i++) {
+        updatedMessages.pop();
       }
 
-      setSelectedConversation(updatedConversation);
-      setLoading(true);
-      setMessageIsStreaming(true);
-
-      if (!activeProvider || !activeProvider.apiKey) {
-        if (!(activeProvider?.id === 'openai' && serverSideApiKeyIsSet)) {
-          setLoading(false);
-          setMessageIsStreaming(false);
-          toast.error(
-            t(
-              'No API key for the selected provider. Set your API key in the bottom left of the sidebar.',
-            ),
-          );
-          return;
-        }
-      }
-
-      const chatBody: ChatBody = {
-        model: updatedConversation.model,
-        messages: updatedConversation.messages,
-        key: activeProvider?.apiKey || '',
-        prompt: updatedConversation.prompt,
-        provider: activeProvider as ChatBody['provider'],
+      updatedConversation = {
+        ...selectedConversation,
+        messages: [...updatedMessages, message!],
       };
+    } else {
+      updatedConversation = {
+        ...selectedConversation,
+        messages: [...selectedConversation.messages, message!],
+      };
+    }
 
-      const endpoint = getEndpoint(plugin);
-      let body;
+    stopConversationRef.current = false;
+    setContinueEnabled(false);
 
-      if (!plugin) {
-        body = JSON.stringify(chatBody);
-      } else {
-        body = JSON.stringify({
-          ...chatBody,
-          googleAPIKey: pluginKeys
-            .find((key) => key.pluginId === 'google-search')
-            ?.requiredKeys.find((key) => key.key === 'GOOGLE_API_KEY')?.value,
-          googleCSEId: pluginKeys
-            .find((key) => key.pluginId === 'google-search')
-            ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
-        });
+    if (!isContinue) {
+      setSelectedConversation(updatedConversation);
+    }
+
+    setLoading(true);
+    setMessageIsStreaming(true);
+
+    if (!activeProvider || !activeProvider.apiKey) {
+      if (!(activeProvider?.id === 'openai' && serverSideApiKeyIsSet)) {
+        setLoading(false);
+        setMessageIsStreaming(false);
+        toast.error(
+          t(
+            'No API key for the selected provider. Set your API key in the bottom left of the sidebar.',
+          ),
+        );
+        return;
       }
+    }
 
-      const controller = new AbortController();
+    const chatBody: ChatBody = {
+      model: updatedConversation.model,
+      messages: updatedConversation.messages,
+      key: activeProvider?.apiKey || '',
+      prompt: updatedConversation.prompt,
+      provider: activeProvider as ChatBody['provider'],
+    };
+
+    const endpoint = getEndpoint(plugin);
+    let body;
+
+    if (!plugin) {
+      body = JSON.stringify(chatBody);
+    } else {
+      body = JSON.stringify({
+        ...chatBody,
+        googleAPIKey: pluginKeys
+          .find((key) => key.pluginId === 'google-search')
+          ?.requiredKeys.find((key) => key.key === 'GOOGLE_API_KEY')?.value,
+        googleCSEId: pluginKeys
+          .find((key) => key.pluginId === 'google-search')
+          ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
+      });
+    }
+
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+
+    try {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -174,8 +195,6 @@ const Home: React.FC<HomeProps> = ({
       });
 
       if (!response.ok) {
-        setLoading(false);
-        setMessageIsStreaming(false);
         const data = await response.json().catch(() => null);
         toast.error(
           data?.message ||
@@ -188,100 +207,10 @@ const Home: React.FC<HomeProps> = ({
       const data = response.body;
 
       if (!data) {
-        setLoading(false);
-        setMessageIsStreaming(false);
         return;
       }
 
-      if (!plugin) {
-        if (updatedConversation.messages.length === 1) {
-          const { content } = message;
-          const customName =
-            content.length > 30 ? content.substring(0, 30) + '...' : content;
-
-          updatedConversation = {
-            ...updatedConversation,
-            name: customName,
-          };
-        }
-
-        setLoading(false);
-
-        const reader = data.getReader();
-        const decoder = new TextDecoder();
-        let done = false;
-        let isFirst = true;
-        let text = '';
-
-        while (!done) {
-          if (stopConversationRef.current === true) {
-            controller.abort();
-            done = true;
-            break;
-          }
-          const { value, done: doneReading } = await reader.read();
-          done = doneReading;
-          const chunkValue = decoder.decode(value);
-
-          text += chunkValue;
-
-          if (isFirst) {
-            isFirst = false;
-            const updatedMessages: Message[] = [
-              ...updatedConversation.messages,
-              { role: 'assistant', content: chunkValue },
-            ];
-
-            updatedConversation = {
-              ...updatedConversation,
-              messages: updatedMessages,
-            };
-
-            setSelectedConversation(updatedConversation);
-          } else {
-            const updatedMessages: Message[] = updatedConversation.messages.map(
-              (message, index) => {
-                if (index === updatedConversation.messages.length - 1) {
-                  return {
-                    ...message,
-                    content: text,
-                  };
-                }
-
-                return message;
-              },
-            );
-
-            updatedConversation = {
-              ...updatedConversation,
-              messages: updatedMessages,
-            };
-
-            setSelectedConversation(updatedConversation);
-          }
-        }
-
-        saveConversation(updatedConversation);
-
-        const updatedConversations: Conversation[] = conversations.map(
-          (conversation) => {
-            if (conversation.id === selectedConversation.id) {
-              return updatedConversation;
-            }
-
-            return conversation;
-          },
-        );
-
-        if (updatedConversations.length === 0) {
-          updatedConversations.push(updatedConversation);
-        }
-
-        setConversations(updatedConversations);
-        saveConversations(updatedConversations);
-
-        setMessageIsStreaming(false);
-      } else {
+      if (plugin) {
         const { answer } = await response.json();
 
         const updatedMessages: Message[] = [
@@ -299,7 +228,7 @@ const Home: React.FC<HomeProps> = ({
 
         const updatedConversations: Conversation[] = conversations.map(
           (conversation) => {
-            if (conversation.id === selectedConversation.id) {
+            if (conversation.id === conversationIdAtSend) {
               return updatedConversation;
             }
 
@@ -313,11 +242,163 @@ const Home: React.FC<HomeProps> = ({
 
         setConversations(updatedConversations);
         saveConversations(updatedConversations);
-
-        setLoading(false);
-        setMessageIsStreaming(false);
+        return;
       }
+
+      if (!isContinue && updatedConversation.messages.length === 1) {
+        const { content } = message!;
+        const customName =
+          content.length > 30 ? content.substring(0, 30) + '...' : content;
+
+        updatedConversation = {
+          ...updatedConversation,
+          name: customName,
+        };
+      }
+
+      setLoading(false);
+
+      const reader = data.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let isFirst = !isContinue;
+      let text = '';
+
+      while (!done) {
+        if (
+          stopConversationRef.current ||
+          conversationResetRef.current !== resetToken
+        ) {
+          controller.abort();
+          break;
+        }
+
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+
+        if (!value) {
+          continue;
+        }
+
+        const chunkValue = decoder.decode(value, { stream: true });
+        text += chunkValue;
+
+        if (isFirst) {
+          isFirst = false;
+          const updatedMessages: Message[] = [
+            ...updatedConversation.messages,
+            { role: 'assistant', content: chunkValue },
+          ];
+
+          updatedConversation = {
+            ...updatedConversation,
+            messages: updatedMessages,
+          };
+        } else {
+          const updatedMessages: Message[] = updatedConversation.messages.map(
+            (message, index) => {
+              if (index === updatedConversation.messages.length - 1) {
+                return {
+                  ...message,
+                  content: text,
+                };
+              }
+
+              return message;
+            },
+          );
+
+          updatedConversation = {
+            ...updatedConversation,
+            messages: updatedMessages,
+          };
+        }
+
+        if (conversationResetRef.current === resetToken) {
+          setSelectedConversation(updatedConversation);
+        }
+      }
+
+      text += decoder.decode();
+
+      if (conversationResetRef.current !== resetToken) {
+        return;
+      }
+
+      const continueRequested = text.includes(CONTINUE_SENTINEL);
+      const cleanText = text.split(CONTINUE_SENTINEL).join('');
+
+      const finalMessages: Message[] = updatedConversation.messages.map(
+        (message, index) => {
+          if (index === updatedConversation.messages.length - 1) {
+            return {
+              ...message,
+              content: cleanText,
+            };
+          }
+
+          return message;
+        },
+      );
+
+      updatedConversation = {
+        ...updatedConversation,
+        messages: finalMessages,
+      };
+
+      setSelectedConversation(updatedConversation);
+      setContinueEnabled(continueRequested);
+
+      saveConversation(updatedConversation);
+
+      const updatedConversations: Conversation[] = conversations.map(
+        (conversation) => {
+          if (conversation.id === conversationIdAtSend) {
+            return updatedConversation;
+          }
+
+          return conversation;
+        },
+      );
+
+      if (updatedConversations.length === 0) {
+        updatedConversations.push(updatedConversation);
+      }
+
+      setConversations(updatedConversations);
+      saveConversations(updatedConversations);
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') {
+        return;
+      }
+
+      console.error(error);
+      toast.error(
+        t('An error occurred while streaming the response. Please try again.'),
+      );
+    } finally {
+      activeControllerRef.current = null;
+      setLoading(false);
+      setMessageIsStreaming(false);
     }
+  };
+
+  const handleAbort = () => {
+    stopConversationRef.current = true;
+    activeControllerRef.current?.abort();
+  };
+
+  const handleContinue = () => {
+    handleSend(undefined, 0, null, true);
+  };
+
+  const abortInFlightStream = () => {
+    activeControllerRef.current?.abort();
+    activeControllerRef.current = null;
+    conversationResetRef.current += 1;
+    setLoading(false);
+    setMessageIsStreaming(false);
+    setContinueEnabled(false);
   };
 
   // FETCH MODELS ----------------------------------------------
@@ -527,6 +608,8 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
+    abortInFlightStream();
+
     setSelectedConversation(conversation);
     saveConversation(conversation);
 
@@ -630,10 +713,12 @@ const Home: React.FC<HomeProps> = ({
     saveConversation(newConversation);
     saveConversations(updatedConversations);
 
-    setLoading(false);
+    abortInFlightStream();
   };
 
   const handleDeleteConversation = (conversation: Conversation) => {
+    abortInFlightStream();
+
     const updatedConversations = conversations.filter(
       (c) => c.id !== conversation.id,
     );
@@ -678,6 +763,8 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleClearConversations = () => {
+    abortInFlightStream();
+
     setConversations([]);
     localStorage.removeItem('conversationHistory');
 
@@ -1030,6 +1117,9 @@ const Home: React.FC<HomeProps> = ({
                 onUpdateConversation={handleUpdateConversation}
                 onEditMessage={handleEditMessage}
                 stopConversationRef={stopConversationRef}
+                onStop={handleAbort}
+                showContinue={continueEnabled}
+                onContinue={handleContinue}
               />
             </div>
 

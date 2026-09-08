@@ -83,12 +83,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     encoding.free();
 
+    const maxTokens = Math.max(1000, model.tokenLimit - tokenCount);
+
     const stream = await OpenAIStream(
       model,
       promptToSend,
       key,
       messagesToSend,
       provider,
+      maxTokens,
     );
 
     return new Response(stream);
