@@ -49,11 +49,14 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(stream);
   } catch (error) {
     console.error(error);
-    if (error instanceof OpenAIError) {
-      return new Response('Error', { status: 500, statusText: error.message });
-    } else {
-      return new Response('Error', { status: 500 });
-    }
+    const message =
+      error instanceof OpenAIError
+        ? error.message
+        : 'An unexpected error occurred. Please try again.';
+    return new Response(JSON.stringify({ message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };
 

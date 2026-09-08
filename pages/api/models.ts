@@ -22,10 +22,15 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (response.status === 401) {
-      return new Response(response.body, {
-        status: 500,
-        headers: response.headers,
-      });
+      return new Response(
+        JSON.stringify({
+          error: {
+            message:
+              'Invalid API key. Please check your OpenAI API key and try again.',
+          },
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
     } else if (response.status !== 200) {
       console.error(
         `OpenAI API returned an error ${

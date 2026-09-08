@@ -147,7 +147,12 @@ const Home: React.FC<HomeProps> = ({
       if (!response.ok) {
         setLoading(false);
         setMessageIsStreaming(false);
-        toast.error(response.statusText);
+        const data = await response.json().catch(() => null);
+        toast.error(
+          data?.message ||
+            response.statusText ||
+            'An error occurred. Please try again.',
+        );
         return;
       }
 
