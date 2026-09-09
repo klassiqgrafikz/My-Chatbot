@@ -1,4 +1,5 @@
 import { Message } from '@/types/chat';
+import { rehypeEmoji, toEmojiHtml } from '@/utils/app/emoji';
 import { IconCheck, IconCopy, IconEdit, IconUser, IconRobot } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, memo, useEffect, useRef, useState } from 'react';
@@ -11,11 +12,12 @@ import { MemoizedReactMarkdown } from '../Markdown/MemoizedReactMarkdown';
 interface Props {
   message: Message;
   messageIndex: number;
+  fontSize: number;
   onEditMessage: (message: Message, messageIndex: number) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
-  ({ message, messageIndex, onEditMessage }) => {
+  ({ message, messageIndex, fontSize, onEditMessage }) => {
     const { t } = useTranslation('chat');
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -127,9 +129,13 @@ export const ChatMessage: FC<Props> = memo(
                     </div>
                   </div>
                 ) : (
-                  <div className="prose whitespace-pre-wrap dark:prose-invert">
-                    {message.content}
-                  </div>
+                  <div
+                    className="prose whitespace-pre-wrap dark:prose-invert"
+                    style={{ fontSize }}
+                    dangerouslySetInnerHTML={{
+                      __html: toEmojiHtml(message.content),
+                    }}
+                  />
                 )}
 
                 {(window.innerWidth < 640 || !isEditing) && (
@@ -170,11 +176,14 @@ export const ChatMessage: FC<Props> = memo(
                   )}
                 </div>
 
-                <MemoizedReactMarkdown
-                  className="prose dark:prose-invert"
-                  remarkPlugins={[remarkGfm, remarkMath]}
-                  rehypePlugins={[rehypeMathjax]}
-                  components={{
+                <div
+                  className="prose w-full dark:prose-invert"
+                  style={{ fontSize }}
+                >
+                  <MemoizedReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeMathjax, rehypeEmoji]}
+                    components={{
                     code({ node, inline, className, children, ...props }) {
                       const match = /language-(\w+)/.exec(className || '');
 
@@ -213,9 +222,10 @@ export const ChatMessage: FC<Props> = memo(
                       );
                     },
                   }}
-                >
-                  {message.content}
-                </MemoizedReactMarkdown>
+>
+                    {message.content}
+                  </MemoizedReactMarkdown>
+                </div>
               </>
             )}
           </div>

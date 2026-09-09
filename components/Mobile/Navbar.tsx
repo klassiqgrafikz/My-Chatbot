@@ -1,26 +1,31 @@
 import { Conversation } from '@/types/chat';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconSettings } from '@tabler/icons-react';
 import { FC } from 'react';
 
 interface Props {
   selectedConversation: Conversation;
   onNewConversation: () => void;
+  onOpenSettings: () => void;
 }
 
 export const Navbar: FC<Props> = ({
   selectedConversation,
   onNewConversation,
+  onOpenSettings,
 }) => {
   return (
     <nav className="flex w-full justify-between bg-[#202123] py-3 px-4">
-      <div className="mr-4"></div>
+      <IconSettings
+        className="cursor-pointer text-neutral-300 hover:text-white"
+        onClick={onOpenSettings}
+      />
 
-      <div className="max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap">
+      <div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap text-neutral-100">
         {selectedConversation.name}
       </div>
 
       <IconPlus
-        className="cursor-pointer hover:text-neutral-400 mr-8"
+        className="cursor-pointer text-neutral-300 hover:text-white"
         onClick={onNewConversation}
       />
     </nav>

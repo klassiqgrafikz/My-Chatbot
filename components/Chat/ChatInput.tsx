@@ -29,6 +29,7 @@ interface Props {
   model: OpenAIModel;
   conversationIsEmpty: boolean;
   prompts: Prompt[];
+  fontSize: number;
   onSend: (message: Message, plugin: Plugin | null) => void;
   onRegenerate: () => void;
   onStop: () => void;
@@ -50,6 +51,7 @@ export const ChatInput: FC<Props> = ({
   onContinue,
   stopConversationRef,
   textareaRef,
+  fontSize,
 }) => {
   const { t } = useTranslation('chat');
 
@@ -317,6 +319,7 @@ export const ChatInput: FC<Props> = ({
             className="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-8 pl-10 text-black dark:bg-transparent dark:text-white md:py-3 md:pl-10"
             style={{
               resize: 'none',
+              fontSize: `${fontSize}px`,
               bottom: `${textareaRef?.current?.scrollHeight}px`,
               maxHeight: '400px',
               overflow: `${

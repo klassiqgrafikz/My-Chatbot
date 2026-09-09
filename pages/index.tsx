@@ -2,6 +2,7 @@ import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
 import { Promptbar } from '@/components/Promptbar/Promptbar';
+import { SettingsDrawer } from '@/components/Settings/SettingsDrawer';
 import { ChatBody, Conversation, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
@@ -68,6 +69,8 @@ const Home: React.FC<HomeProps> = ({
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [messageIsStreaming, setMessageIsStreaming] = useState<boolean>(false);
   const [continueEnabled, setContinueEnabled] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [chatFontSize, setChatFontSize] = useState<number>(16);
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
@@ -545,6 +548,22 @@ const Home: React.FC<HomeProps> = ({
     localStorage.setItem('theme', mode);
   };
 
+  const handleFontSizeChange = (delta: number) => {
+    setChatFontSize((prev) => {
+      const next = Math.min(22, Math.max(14, prev + delta));
+      localStorage.setItem('chatFontSize', String(next));
+      return next;
+    });
+  };
+
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  };
+
   const handlePluginKeyChange = (pluginKey: PluginKey) => {
     if (pluginKeys.some((key) => key.pluginId === pluginKey.pluginId)) {
       const updatedPluginKeys = pluginKeys.map((key) => {
@@ -894,6 +913,14 @@ const Home: React.FC<HomeProps> = ({
       setLightMode(theme as 'dark' | 'light');
     }
 
+    const storedFontSize = localStorage.getItem('chatFontSize');
+    if (storedFontSize) {
+      const parsed = parseInt(storedFontSize, 10);
+      if (!isNaN(parsed)) {
+        setChatFontSize(Math.min(22, Math.max(14, parsed)));
+      }
+    }
+
     let loadedProviders: AIProvider[] = [];
     const storedProviders = localStorage.getItem('providers');
     if (storedProviders) {
@@ -1041,6 +1068,7 @@ const Home: React.FC<HomeProps> = ({
             <Navbar
               selectedConversation={selectedConversation}
               onNewConversation={handleNewConversation}
+              onOpenSettings={handleOpenSettings}
             />
           </div>
 
@@ -1050,20 +1078,8 @@ const Home: React.FC<HomeProps> = ({
                 <Chatbar
                   loading={messageIsStreaming}
                   conversations={conversations}
-                  lightMode={lightMode}
                   selectedConversation={selectedConversation}
-                  providers={providers}
-                  selectedProviderId={selectedProviderId}
-                  loadingProviderId={
-                    providerFetch.loading ? providerFetch.providerId : null
-                  }
-                  loadErrorProviderId={
-                    providerFetch.error ? providerFetch.providerId : null
-                  }
-                  loadError={providerFetch.error}
-                  pluginKeys={pluginKeys}
                   folders={folders.filter((folder) => folder.type === 'chat')}
-                  onToggleLightMode={handleLightMode}
                   onCreateFolder={(name) => handleCreateFolder(name, 'chat')}
                   onDeleteFolder={handleDeleteFolder}
                   onUpdateFolder={handleUpdateFolder}
@@ -1071,15 +1087,6 @@ const Home: React.FC<HomeProps> = ({
                   onSelectConversation={handleSelectConversation}
                   onDeleteConversation={handleDeleteConversation}
                   onUpdateConversation={handleUpdateConversation}
-                  onUpdateProvider={handleUpdateProvider}
-                  onSelectProvider={handleSelectProvider}
-                  onAddProvider={handleAddProvider}
-                  onRemoveProvider={handleRemoveProvider}
-                  onClearConversations={handleClearConversations}
-                  onExportConversations={handleExportData}
-                  onImportConversations={handleImportConversations}
-                  onPluginKeyChange={handlePluginKeyChange}
-                  onClearPluginKey={handleClearPluginKey}
                 />
 
                 <button
@@ -1113,6 +1120,9 @@ const Home: React.FC<HomeProps> = ({
                 models={models}
                 loading={loading}
                 prompts={prompts}
+                fontSize={chatFontSize}
+                onFontSizeChange={handleFontSizeChange}
+                onOpenSettings={handleOpenSettings}
                 onSend={handleSend}
                 onUpdateConversation={handleUpdateConversation}
                 onEditMessage={handleEditMessage}
@@ -1155,6 +1165,33 @@ const Home: React.FC<HomeProps> = ({
               </button>
             )}
           </div>
+
+          <SettingsDrawer
+            open={showSettings}
+            lightMode={lightMode}
+            providers={providers}
+            selectedProviderId={selectedProviderId}
+            loadingProviderId={
+              providerFetch.loading ? providerFetch.providerId : null
+            }
+            loadErrorProviderId={
+              providerFetch.error ? providerFetch.providerId : null
+            }
+            loadError={providerFetch.error}
+            pluginKeys={pluginKeys}
+            conversationsCount={conversations.length}
+            onClose={handleCloseSettings}
+            onToggleLightMode={handleLightMode}
+            onUpdateProvider={handleUpdateProvider}
+            onSelectProvider={handleSelectProvider}
+            onAddProvider={handleAddProvider}
+            onRemoveProvider={handleRemoveProvider}
+            onClearConversations={handleClearConversations}
+            onExportConversations={handleExportData}
+            onImportConversations={handleImportConversations}
+            onPluginKeyChange={handlePluginKeyChange}
+            onClearPluginKey={handleClearPluginKey}
+          />
         </main>
       )}
     </>
