@@ -1,10 +1,12 @@
-import { Message } from '@/types/chat';
+import { Conversation, Message } from '@/types/chat';
+import { KeyValuePair } from '@/types/data';
 import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
 import {
   IconBolt,
   IconBrandGoogle,
+  IconChevronDown,
   IconPlayerPlay,
   IconPlayerStop,
   IconRepeat,
@@ -20,13 +22,19 @@ import {
   useRef,
   useState,
 } from 'react';
+import { ModelSelect } from './ModelSelect';
 import { PluginSelect } from './PluginSelect';
 import { PromptList } from './PromptList';
+import { SystemPrompt } from './SystemPrompt';
 import { VariableModal } from './VariableModal';
 
 interface Props {
   messageIsStreaming: boolean;
   model: OpenAIModel;
+  models: OpenAIModel[];
+  providerName: string;
+  usageUrl?: string;
+  conversation: Conversation;
   conversationIsEmpty: boolean;
   prompts: Prompt[];
   fontSize: number;
@@ -35,6 +43,10 @@ interface Props {
   onStop: () => void;
   showContinue: boolean;
   onContinue: () => void;
+  onUpdateConversation: (
+    conversation: Conversation,
+    data: KeyValuePair,
+  ) => void;
   stopConversationRef: MutableRefObject<boolean>;
   textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
 }
@@ -42,6 +54,10 @@ interface Props {
 export const ChatInput: FC<Props> = ({
   messageIsStreaming,
   model,
+  models,
+  providerName,
+  usageUrl,
+  conversation,
   conversationIsEmpty,
   prompts,
   onSend,
@@ -49,6 +65,7 @@ export const ChatInput: FC<Props> = ({
   onStop,
   showContinue,
   onContinue,
+  onUpdateConversation,
   stopConversationRef,
   textareaRef,
   fontSize,
@@ -63,6 +80,7 @@ export const ChatInput: FC<Props> = ({
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showPluginSelect, setShowPluginSelect] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const [plugin, setPlugin] = useState<Plugin | null>(null);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
@@ -171,6 +189,9 @@ export const ChatInput: FC<Props> = ({
     } else if (e.key === '/' && e.metaKey) {
       e.preventDefault();
       setShowPluginSelect(!showPluginSelect);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowModelPicker(false);
     }
   };
 
@@ -261,7 +282,7 @@ export const ChatInput: FC<Props> = ({
 
   return (
     <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
-      <div className="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-3xl">
+      <div className="mx-2 mt-4 flex flex-col last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-3xl">
         {messageIsStreaming && (
           <button
             className="absolute top-0 left-0 right-0 mx-auto mb-3 flex w-fit items-center gap-3 rounded border border-neutral-200 bg-white py-2 px-4 text-black hover:opacity-50 dark:border-neutral-600 dark:bg-[#343541] dark:text-white md:mb-0 md:mt-2"
@@ -289,89 +310,152 @@ export const ChatInput: FC<Props> = ({
           </button>
         )}
 
-        <div className="relative mx-2 flex w-full flex-grow flex-col rounded-md border border-black/10 bg-white shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] sm:mx-4">
-          <button
-            className="absolute left-2 top-2 rounded-sm p-1 text-neutral-800 opacity-60 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200"
-            onClick={() => setShowPluginSelect(!showPluginSelect)}
-            onKeyDown={(e) => {}}
-          >
-            {plugin ? <IconBrandGoogle size={20} /> : <IconBolt size={20} />}
-          </button>
-
-          {showPluginSelect && (
-            <div className="absolute left-0 bottom-14 bg-white dark:bg-[#343541]">
-              <PluginSelect
-                plugin={plugin}
-                onPluginChange={(plugin: Plugin) => {
-                  setPlugin(plugin);
-                  setShowPluginSelect(false);
-
-                  if (textareaRef && textareaRef.current) {
-                    textareaRef.current.focus();
-                  }
-                }}
+        {showModelPicker && (
+          <div className="z-10 mb-2 max-h-[60vh] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-600 dark:bg-[#2a2b32]">
+            <div className="flex flex-col gap-3">
+              <ModelSelect
+                model={model}
+                models={models}
+                providerName={providerName}
+                usageUrl={usageUrl}
+                onModelChange={(nextModel) =>
+                  onUpdateConversation(conversation, {
+                    key: 'model',
+                    value: nextModel,
+                  })
+                }
               />
-            </div>
-          )}
-
-          <textarea
-            ref={textareaRef}
-            className="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-8 pl-10 text-black dark:bg-transparent dark:text-white md:py-3 md:pl-10"
-            style={{
-              resize: 'none',
-              fontSize: `${fontSize}px`,
-              bottom: `${textareaRef?.current?.scrollHeight}px`,
-              maxHeight: '400px',
-              overflow: `${
-                textareaRef.current && textareaRef.current.scrollHeight > 400
-                  ? 'auto'
-                  : 'hidden'
-              }`,
-            }}
-            placeholder={
-              t('Type a message or type "/" to select a prompt...') || ''
-            }
-            value={content}
-            rows={1}
-            onCompositionStart={() => setIsTyping(true)}
-            onCompositionEnd={() => setIsTyping(false)}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-          />
-
-          <button
-            className="absolute right-2 top-2 rounded-sm p-1 text-neutral-800 opacity-60 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200"
-            onClick={handleSend}
-          >
-            {messageIsStreaming ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-t-2 border-neutral-800 opacity-60 dark:border-neutral-100"></div>
-            ) : (
-              <IconSend size={18} />
-            )}
-          </button>
-
-          {showPromptList && filteredPrompts.length > 0 && (
-            <div className="absolute bottom-12 w-full">
-              <PromptList
-                activePromptIndex={activePromptIndex}
-                prompts={filteredPrompts}
-                onSelect={handleInitModal}
-                onMouseOver={setActivePromptIndex}
-                promptListRef={promptListRef}
+              <SystemPrompt
+                conversation={conversation}
+                prompts={prompts}
+                onChangePrompt={(prompt) =>
+                  onUpdateConversation(conversation, {
+                    key: 'prompt',
+                    value: prompt,
+                  })
+                }
               />
+              <button
+                className="mx-auto rounded border border-neutral-300 px-4 py-1.5 text-sm text-neutral-700 hover:bg-neutral-200 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-gray-500/10"
+                onClick={() =>
+                  onUpdateConversation(conversation, {
+                    key: 'messages',
+                    value: [],
+                  })
+                }
+              >
+                {t('Clear messages')}
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {isModalVisible && (
-            <VariableModal
-              prompt={prompts[activePromptIndex]}
-              variables={variables}
-              onSubmit={handleSubmit}
-              onClose={() => setIsModalVisible(false)}
+        <div className="relative flex w-full flex-col">
+          <div className="relative flex items-end rounded-[28px] border border-black/10 bg-white px-2 py-2 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+            <button
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+              onClick={() => setShowPluginSelect(!showPluginSelect)}
+            >
+              {plugin ? (
+                <IconBrandGoogle size={20} />
+              ) : (
+                <IconBolt size={20} />
+              )}
+            </button>
+
+            <textarea
+              ref={textareaRef}
+              className="m-0 w-full flex-1 resize-none border-0 bg-transparent px-1 py-2 text-black dark:bg-transparent dark:text-white"
+              style={{
+                resize: 'none',
+                fontSize: `${fontSize}px`,
+                maxHeight: '400px',
+                overflow: `${
+                  textareaRef.current && textareaRef.current.scrollHeight > 400
+                    ? 'auto'
+                    : 'hidden'
+                }`,
+              }}
+              placeholder={
+                t('Type a message or type "/" to select a prompt...') || ''
+              }
+              value={content}
+              rows={1}
+              onCompositionStart={() => setIsTyping(true)}
+              onCompositionEnd={() => setIsTyping(false)}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
             />
-          )}
+
+            <button
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-white transition-opacity hover:opacity-80 disabled:opacity-40 dark:bg-white dark:text-black"
+              onClick={handleSend}
+            >
+              {messageIsStreaming ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-t-2 border-neutral-800 opacity-60 dark:border-neutral-100"></div>
+              ) : (
+                <IconSend size={18} />
+              )}
+            </button>
+
+            {showPluginSelect && (
+              <div className="absolute left-0 bottom-full z-20 mb-2 w-56 rounded-lg border border-neutral-200 bg-white shadow-xl dark:border-neutral-600 dark:bg-[#343541]">
+                <PluginSelect
+                  plugin={plugin}
+                  onPluginChange={(nextPlugin: Plugin) => {
+                    setPlugin(nextPlugin);
+                    setShowPluginSelect(false);
+
+                    if (textareaRef && textareaRef.current) {
+                      textareaRef.current.focus();
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {showPromptList && filteredPrompts.length > 0 && (
+              <div className="absolute bottom-full z-20 mb-2 w-full">
+                <PromptList
+                  activePromptIndex={activePromptIndex}
+                  prompts={filteredPrompts}
+                  onSelect={handleInitModal}
+                  onMouseOver={setActivePromptIndex}
+                  promptListRef={promptListRef}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 px-2 pt-1.5">
+            <button
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+              onClick={() => setShowModelPicker(!showModelPicker)}
+              title={t('Model settings') as string}
+            >
+              <span className="max-w-[200px] truncate">
+                {providerName} · {model.name}
+              </span>
+              {model.isFree && (
+                <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-green-600 dark:text-green-400">
+                  {t('Free')}
+                </span>
+              )}
+              <IconChevronDown size={14} className="shrink-0" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {isModalVisible && (
+        <VariableModal
+          prompt={prompts[activePromptIndex]}
+          variables={variables}
+          onSubmit={handleSubmit}
+          onClose={() => setIsModalVisible(false)}
+        />
+      )}
+
       <div className="px-3 pt-2 pb-3 text-center text-[12px] text-black/50 dark:text-white/50 md:px-4 md:pt-3 md:pb-6">
         <a
           href="https://github.com/mckaywrigley/chatbot-ui"

@@ -2,7 +2,10 @@ import { SupportedExportFormats } from '@/types/export';
 import { PluginKey } from '@/types/plugin';
 import { AIProvider } from '@/types/provider';
 import {
+  IconArrowBigDown,
+  IconArrowBigUp,
   IconFileExport,
+  IconLetterA,
   IconMoon,
   IconSun,
   IconX,
@@ -25,8 +28,11 @@ interface Props {
   loadError: string | null;
   pluginKeys: PluginKey[];
   conversationsCount: number;
+  fontSize: number;
   onClose: () => void;
   onToggleLightMode: (mode: 'light' | 'dark') => void;
+  onFontSizeChange: (delta: number) => void;
+  onFontSizeSet: (px: number) => void;
   onUpdateProvider: (provider: AIProvider) => void;
   onSelectProvider: (providerId: string) => void;
   onAddProvider: (name: string, apiHost: string, apiKey: string) => void;
@@ -38,8 +44,11 @@ interface Props {
   onClearPluginKey: (pluginKey: PluginKey) => void;
 }
 
+const FONT_MIN = 14;
+const FONT_MAX = 22;
+
 const Panel = ({ title, children }: { title: string; children: any }) => (
-  <section className="border-b border-white/10 px-5 py-5">
+  <section className="border-b border-white/10 px-6 py-5">
     <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
       {title}
     </h2>
@@ -57,8 +66,11 @@ export const SettingsDrawer: FC<Props> = ({
   loadError,
   pluginKeys,
   conversationsCount,
+  fontSize,
   onClose,
   onToggleLightMode,
+  onFontSizeChange,
+  onFontSizeSet,
   onUpdateProvider,
   onSelectProvider,
   onAddProvider,
@@ -89,16 +101,16 @@ export const SettingsDrawer: FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex justify-end bg-black/60"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60"
       onClick={onClose}
     >
       <div
-        className="flex h-full w-[380px] max-w-[92vw] flex-col bg-[#202123] text-white shadow-2xl"
+        className="mx-4 flex max-h-[85vh] w-[600px] max-w-full flex-col overflow-hidden rounded-2xl bg-[#202123] text-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Settings"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div className="text-lg font-semibold">{t('Settings')}</div>
           <button
             className="rounded-md p-1 text-neutral-400 transition-colors hover:bg-gray-500/10 hover:text-white"
@@ -131,6 +143,43 @@ export const SettingsDrawer: FC<Props> = ({
               >
                 <IconMoon size={16} /> {t('Dark')}
               </button>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-2 text-sm text-neutral-300">
+                {t('Message font size')} · {fontSize}px
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex h-[36px] w-[36px] items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40"
+                  title={t('Decrease text size') as string}
+                  disabled={fontSize <= FONT_MIN}
+                  onClick={() => onFontSizeChange(-1)}
+                >
+                  <IconLetterA size={16} />
+                  <IconArrowBigDown size={12} />
+                </button>
+
+                <input
+                  type="range"
+                  min={FONT_MIN}
+                  max={FONT_MAX}
+                  step={1}
+                  value={fontSize}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-600 accent-white"
+                  onChange={(e) => onFontSizeSet(parseInt(e.target.value, 10))}
+                />
+
+                <button
+                  className="flex h-[36px] w-[36px] items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40"
+                  title={t('Increase text size') as string}
+                  disabled={fontSize >= FONT_MAX}
+                  onClick={() => onFontSizeChange(1)}
+                >
+                  <IconLetterA size={16} />
+                  <IconArrowBigUp size={12} />
+                </button>
+              </div>
             </div>
           </Panel>
 

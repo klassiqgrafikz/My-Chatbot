@@ -5,14 +5,7 @@ import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
 import { throttle } from '@/utils';
-import {
-  IconArrowDown,
-  IconChevronDown,
-  IconSettings,
-  IconLetterA,
-  IconArrowBigUp,
-  IconArrowBigDown,
-} from '@tabler/icons-react';
+import { IconArrowDown } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import {
   FC,
@@ -28,8 +21,6 @@ import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
-import { ModelSelect } from './ModelSelect';
-import { SystemPrompt } from './SystemPrompt';
 
 interface Props {
   conversation: Conversation;
@@ -42,8 +33,6 @@ interface Props {
   loading: boolean;
   prompts: Prompt[];
   fontSize: number;
-  onFontSizeChange: (delta: number) => void;
-  onOpenSettings: () => void;
   onSend: (
     message: Message,
     deleteCount: number,
@@ -60,8 +49,12 @@ interface Props {
   onContinue: () => void;
 }
 
-const FONT_MIN = 14;
-const FONT_MAX = 22;
+const SUGGESTIONS: string[] = [
+  'Explain why the sky is blue in simple terms',
+  'Write a short story about a robot learning to paint',
+  'Give me 5 ideas for a weekend hobby',
+  'Summarize the plot of the movie Inception',
+];
 
 export const Chat: FC<Props> = memo(
   ({
@@ -75,8 +68,6 @@ export const Chat: FC<Props> = memo(
     loading,
     prompts,
     fontSize,
-    onFontSizeChange,
-    onOpenSettings,
     onSend,
     onUpdateConversation,
     onEditMessage,
@@ -88,7 +79,6 @@ export const Chat: FC<Props> = memo(
     const { t } = useTranslation('chat');
     const [currentMessage, setCurrentMessage] = useState<Message>();
     const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
-    const [showSettings, setShowSettings] = useState<boolean>(false);
     const [showScrollDownButton, setShowScrollDownButton] =
       useState<boolean>(false);
 
@@ -124,16 +114,6 @@ export const Chat: FC<Props> = memo(
         top: chatContainerRef.current.scrollHeight,
         behavior: 'smooth',
       });
-    };
-
-    const handleSettings = () => {
-      setShowSettings(!showSettings);
-    };
-
-    const onClearAll = () => {
-      if (confirm(t<string>('Are you sure you want to clear all messages?'))) {
-        onUpdateConversation(conversation, { key: 'messages', value: [] });
-      }
     };
 
     const scrollDown = () => {
@@ -174,89 +154,14 @@ export const Chat: FC<Props> = memo(
       };
     }, [messagesEndRef]);
 
+    const handleRegenerate = () => {
+      if (currentMessage) {
+        onSend(currentMessage, 2, null);
+      }
+    };
+
     return (
       <div className="relative flex h-full min-w-0 flex-1 flex-col bg-white dark:bg-[#343541]">
-        <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-black/10 px-3 dark:border-white/10">
-          <button
-            className="flex min-w-0 items-center gap-1.5 text-left hover:opacity-80"
-            onClick={handleSettings}
-            title={t('Model settings') as string}
-          >
-            <span className="max-w-[230px] truncate text-sm font-medium text-black dark:text-white">
-              {`${providerName} · ${conversation.model.name}`}
-            </span>
-            {conversation.model.isFree && (
-              <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-green-600 dark:text-green-400">
-                {t('Free')}
-              </span>
-            )}
-            <IconChevronDown size={14} className="shrink-0 text-neutral-400" />
-          </button>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              className="flex items-center gap-1 rounded-md border border-black/10 px-2 py-1.5 text-sm text-black transition-colors hover:bg-neutral-200 disabled:opacity-40 dark:border-white/10 dark:text-white dark:hover:bg-gray-500/10"
-              title={t('Decrease text size') as string}
-              disabled={fontSize <= FONT_MIN}
-              onClick={() => onFontSizeChange(-1)}
-            >
-              <IconLetterA size={15} />
-              <IconArrowBigDown size={13} />
-            </button>
-            <button
-              className="flex items-center gap-1 rounded-md border border-black/10 px-2 py-1.5 text-sm text-black transition-colors hover:bg-neutral-200 disabled:opacity-40 dark:border-white/10 dark:text-white dark:hover:bg-gray-500/10"
-              title={t('Increase text size') as string}
-              disabled={fontSize >= FONT_MAX}
-              onClick={() => onFontSizeChange(1)}
-            >
-              <IconLetterA size={15} />
-              <IconArrowBigUp size={13} />
-            </button>
-            <button
-              className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-gray-500/10 dark:hover:text-white"
-              onClick={onOpenSettings}
-              title={t('Settings') as string}
-            >
-              <IconSettings size={19} />
-            </button>
-          </div>
-        </div>
-
-        {showSettings && !modelError && (
-          <div className="shrink-0 border-b border-black/10 bg-neutral-50 p-4 dark:border-white/10 dark:bg-[#2a2b32]">
-            <div className="mx-auto flex flex-col gap-3 md:max-w-2xl">
-              <ModelSelect
-                model={conversation.model}
-                models={models}
-                providerName={providerName}
-                usageUrl={providerUsageUrl}
-                onModelChange={(model) =>
-                  onUpdateConversation(conversation, {
-                    key: 'model',
-                    value: model,
-                  })
-                }
-              />
-              <SystemPrompt
-                conversation={conversation}
-                prompts={prompts}
-                onChangePrompt={(prompt) =>
-                  onUpdateConversation(conversation, {
-                    key: 'prompt',
-                    value: prompt,
-                  })
-                }
-              />
-              <button
-                className="mx-auto rounded border border-neutral-300 px-4 py-1.5 text-sm text-neutral-700 hover:bg-neutral-200 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-gray-500/10"
-                onClick={onClearAll}
-              >
-                {t('Clear messages')}
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="relative min-h-0 flex-1">
           {!hasProviderKey ? (
             <div className="flex h-full items-center justify-center overflow-y-auto">
@@ -310,47 +215,38 @@ export const Chat: FC<Props> = memo(
                 onScroll={handleScroll}
               >
                 {conversation.messages.length === 0 ? (
-                  <>
-                    <div className="mx-auto flex w-[350px] flex-col space-y-10 pt-12 sm:w-[600px]">
-                      <div className="text-center text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                        {models.length === 0 ? (
-                          <div>
-                            <Spinner size="16px" className="mx-auto" />
-                          </div>
-                        ) : (
-                          'Chatbot UI'
-                        )}
-                      </div>
-
-                      {models.length > 0 && (
-                        <div className="flex h-full flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-600">
-                          <ModelSelect
-                            model={conversation.model}
-                            models={models}
-                            providerName={providerName}
-                            usageUrl={providerUsageUrl}
-                            onModelChange={(model) =>
-                              onUpdateConversation(conversation, {
-                                key: 'model',
-                                value: model,
-                              })
-                            }
-                          />
-
-                          <SystemPrompt
-                            conversation={conversation}
-                            prompts={prompts}
-                            onChangePrompt={(prompt) =>
-                              onUpdateConversation(conversation, {
-                                key: 'prompt',
-                                value: prompt,
-                              })
-                            }
-                          />
+                  <div className="flex h-full flex-col items-center justify-center space-y-6 px-4">
+                    <div className="text-center text-2xl font-semibold text-black dark:text-white sm:text-3xl">
+                      {models.length === 0 ? (
+                        <div>
+                          <Spinner size="16px" className="mx-auto" />
                         </div>
+                      ) : (
+                        t('What can I help with?')
                       )}
                     </div>
-                  </>
+
+                    {models.length > 0 && (
+                      <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+                        {SUGGESTIONS.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            className="cursor-pointer rounded-2xl border border-black/10 p-4 text-left text-sm text-neutral-600 transition-colors duration-200 hover:bg-black/5 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-white/5"
+                            disabled={messageIsStreaming}
+                            onClick={() =>
+                              onSend(
+                                { role: 'user', content: suggestion },
+                                0,
+                                null,
+                              )
+                            }
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <>
                     {conversation.messages.map((message, index) => (
@@ -360,6 +256,7 @@ export const Chat: FC<Props> = memo(
                         messageIndex={index}
                         fontSize={fontSize}
                         onEditMessage={onEditMessage}
+                        onRegenerate={handleRegenerate}
                       />
                     ))}
 
@@ -377,22 +274,23 @@ export const Chat: FC<Props> = memo(
                 stopConversationRef={stopConversationRef}
                 textareaRef={textareaRef}
                 messageIsStreaming={messageIsStreaming}
-                conversationIsEmpty={conversation.messages.length === 0}
                 model={conversation.model}
+                models={models}
+                providerName={providerName}
+                usageUrl={providerUsageUrl}
+                conversation={conversation}
+                conversationIsEmpty={conversation.messages.length === 0}
                 prompts={prompts}
                 fontSize={fontSize}
                 onStop={onStop}
                 showContinue={showContinue}
                 onContinue={onContinue}
+                onUpdateConversation={onUpdateConversation}
                 onSend={(message, plugin) => {
                   setCurrentMessage(message);
                   onSend(message, 0, plugin);
                 }}
-                onRegenerate={() => {
-                  if (currentMessage) {
-                    onSend(currentMessage, 2, null);
-                  }
-                }}
+                onRegenerate={handleRegenerate}
               />
             </>
           )}

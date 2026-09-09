@@ -1,7 +1,6 @@
 import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
-import { Promptbar } from '@/components/Promptbar/Promptbar';
 import { SettingsDrawer } from '@/components/Settings/SettingsDrawer';
 import { ChatBody, Conversation, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
@@ -80,9 +79,9 @@ const Home: React.FC<HomeProps> = ({
   const [currentMessage, setCurrentMessage] = useState<Message>();
 
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [showPromptbar, setShowPromptbar] = useState<boolean>(true);
 
   // REFS ----------------------------------------------
 
@@ -556,6 +555,12 @@ const Home: React.FC<HomeProps> = ({
     });
   };
 
+  const handleFontSizeSet = (px: number) => {
+    const next = Math.min(22, Math.max(14, Math.round(px)));
+    setChatFontSize(next);
+    localStorage.setItem('chatFontSize', String(next));
+  };
+
   const handleOpenSettings = () => {
     setShowSettings(true);
   };
@@ -604,13 +609,16 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleToggleChatbar = () => {
-    setShowSidebar(!showSidebar);
-    localStorage.setItem('showChatbar', JSON.stringify(!showSidebar));
-  };
-
-  const handleTogglePromptbar = () => {
-    setShowPromptbar(!showPromptbar);
-    localStorage.setItem('showPromptbar', JSON.stringify(!showPromptbar));
+    if (window.innerWidth < 640) {
+      setShowSidebar(!showSidebar);
+      localStorage.setItem('showChatbar', JSON.stringify(!showSidebar));
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+      localStorage.setItem(
+        'chatbarCollapsed',
+        JSON.stringify(!sidebarCollapsed),
+      );
+    }
   };
 
   const handleExportData = () => {
@@ -970,9 +978,9 @@ const Home: React.FC<HomeProps> = ({
       setShowSidebar(showChatbar === 'true');
     }
 
-    const showPromptbar = localStorage.getItem('showPromptbar');
-    if (showPromptbar) {
-      setShowPromptbar(showPromptbar === 'true');
+    const chatbarCollapsed = localStorage.getItem('chatbarCollapsed');
+    if (chatbarCollapsed) {
+      setSidebarCollapsed(chatbarCollapsed === 'true');
     }
 
     const folders = localStorage.getItem('folders');
@@ -1079,18 +1087,26 @@ const Home: React.FC<HomeProps> = ({
                   loading={messageIsStreaming}
                   conversations={conversations}
                   selectedConversation={selectedConversation}
-                  folders={folders.filter((folder) => folder.type === 'chat')}
-                  onCreateFolder={(name) => handleCreateFolder(name, 'chat')}
+                  folders={folders}
+                  prompts={prompts}
+                  collapsed={sidebarCollapsed}
+                  onOpenSettings={handleOpenSettings}
+                  onCreateFolder={handleCreateFolder}
                   onDeleteFolder={handleDeleteFolder}
                   onUpdateFolder={handleUpdateFolder}
                   onNewConversation={handleNewConversation}
                   onSelectConversation={handleSelectConversation}
                   onDeleteConversation={handleDeleteConversation}
                   onUpdateConversation={handleUpdateConversation}
+                  onCreatePrompt={handleCreatePrompt}
+                  onUpdatePrompt={handleUpdatePrompt}
+                  onDeletePrompt={handleDeletePrompt}
                 />
 
                 <button
-                  className="fixed top-5 left-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
+                  className={`fixed top-5 left-[280px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700 ${
+                    sidebarCollapsed ? 'sm:left-[68px]' : 'sm:left-[280px]'
+                  }`}
                   onClick={handleToggleChatbar}
                 >
                   <IconArrowBarLeft />
@@ -1121,8 +1137,6 @@ const Home: React.FC<HomeProps> = ({
                 loading={loading}
                 prompts={prompts}
                 fontSize={chatFontSize}
-                onFontSizeChange={handleFontSizeChange}
-                onOpenSettings={handleOpenSettings}
                 onSend={handleSend}
                 onUpdateConversation={handleUpdateConversation}
                 onEditMessage={handleEditMessage}
@@ -1132,38 +1146,6 @@ const Home: React.FC<HomeProps> = ({
                 onContinue={handleContinue}
               />
             </div>
-
-            {showPromptbar ? (
-              <div>
-                <Promptbar
-                  prompts={prompts}
-                  folders={folders.filter((folder) => folder.type === 'prompt')}
-                  onCreatePrompt={handleCreatePrompt}
-                  onUpdatePrompt={handleUpdatePrompt}
-                  onDeletePrompt={handleDeletePrompt}
-                  onCreateFolder={(name) => handleCreateFolder(name, 'prompt')}
-                  onDeleteFolder={handleDeleteFolder}
-                  onUpdateFolder={handleUpdateFolder}
-                />
-                <button
-                  className="fixed top-5 right-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
-                  onClick={handleTogglePromptbar}
-                >
-                  <IconArrowBarRight />
-                </button>
-                <div
-                  onClick={handleTogglePromptbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
-                ></div>
-              </div>
-            ) : (
-              <button
-                className="fixed top-2.5 right-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-4 sm:h-8 sm:w-8 sm:text-neutral-700"
-                onClick={handleTogglePromptbar}
-              >
-                <IconArrowBarLeft />
-              </button>
-            )}
           </div>
 
           <SettingsDrawer
@@ -1180,8 +1162,11 @@ const Home: React.FC<HomeProps> = ({
             loadError={providerFetch.error}
             pluginKeys={pluginKeys}
             conversationsCount={conversations.length}
+            fontSize={chatFontSize}
             onClose={handleCloseSettings}
             onToggleLightMode={handleLightMode}
+            onFontSizeChange={handleFontSizeChange}
+            onFontSizeSet={handleFontSizeSet}
             onUpdateProvider={handleUpdateProvider}
             onSelectProvider={handleSelectProvider}
             onAddProvider={handleAddProvider}
