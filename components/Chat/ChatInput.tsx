@@ -3,6 +3,7 @@ import { KeyValuePair } from '@/types/data';
 import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
+import { VoiceSettings } from '@/types/voice';
 import {
   MAX_FILES_PER_MESSAGE,
   MAX_IMAGES_PER_MESSAGE,
@@ -42,6 +43,7 @@ import { PluginSelect } from './PluginSelect';
 import { PromptList } from './PromptList';
 import { SystemPrompt } from './SystemPrompt';
 import { VariableModal } from './VariableModal';
+import { VoiceRecorder } from './VoiceRecorder';
 
 interface Props {
   messageIsStreaming: boolean;
@@ -53,6 +55,7 @@ interface Props {
   conversationIsEmpty: boolean;
   prompts: Prompt[];
   fontSize: number;
+  voice?: VoiceSettings;
   onSend: (message: Message, plugin: Plugin | null) => void;
   onRegenerate: () => void;
   onStop: () => void;
@@ -84,6 +87,7 @@ export const ChatInput: FC<Props> = ({
   stopConversationRef,
   textareaRef,
   fontSize,
+  voice,
 }) => {
   const { t } = useTranslation('chat');
 
@@ -148,6 +152,30 @@ export const ChatInput: FC<Props> = ({
       },
       plugin,
     );
+    setContent('');
+    setAttachments([]);
+    setPlugin(null);
+    setShowAttachMenu(false);
+
+    if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
+      textareaRef.current.blur();
+    }
+  };
+
+  const handleVoiceTranscript = (transcript: string) => {
+    if (messageIsStreaming) {
+      return;
+    }
+
+    const combined = content?.trim()
+      ? `${content.trim()} ${transcript}`
+      : transcript;
+
+    if (!combined.trim()) {
+      return;
+    }
+
+    onSend({ role: 'user', content: combined.trim() }, plugin);
     setContent('');
     setAttachments([]);
     setPlugin(null);
@@ -406,7 +434,7 @@ export const ChatInput: FC<Props> = ({
   }, []);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 pb-[env(safe-area-inset-bottom)] dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
+    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-4 pb-[env(safe-area-inset-bottom)] dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
       <div className="mx-2 mt-4 flex flex-col last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-3xl">
         {messageIsStreaming && (
           <button
@@ -476,7 +504,7 @@ export const ChatInput: FC<Props> = ({
         )}
 
         <div className="relative flex w-full flex-col">
-          <div className="relative flex flex-col rounded-[28px] border border-black/10 bg-white px-2 py-2 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+          <div className="relative flex flex-col rounded-[24px] border border-black/10 bg-white px-2 py-1.5 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] md:rounded-[28px] md:py-2">
             {attachments.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pb-1 pl-1">
                 {attachments.map((attachment, index) => (
@@ -604,9 +632,18 @@ export const ChatInput: FC<Props> = ({
               )}
             </button>
 
+            {voice && voice.enabled && (
+              <VoiceRecorder
+                apiKey={voice.fishApiKey}
+                language={voice.language}
+                disabled={messageIsStreaming}
+                onTranscript={handleVoiceTranscript}
+              />
+            )}
+
             <textarea
               ref={textareaRef}
-              className="m-0 w-full flex-1 resize-none border-0 bg-transparent px-1 py-2 text-black dark:bg-transparent dark:text-white"
+              className="m-0 w-full flex-1 resize-none border-0 bg-transparent px-1 py-2 text-black focus:outline-none focus:ring-0 dark:bg-transparent dark:text-white"
               style={{
                 resize: 'none',
                 fontSize: `${fontSize}px`,
@@ -711,21 +748,6 @@ export const ChatInput: FC<Props> = ({
           onDecline={declinePendingFiles}
         />
       )}
-
-      <div className="px-3 pt-2 pb-3 text-center text-[12px] text-black/50 dark:text-white/70 md:px-4 md:pt-3 md:pb-6">
-        <a
-          href="https://github.com/mckaywrigley/chatbot-ui"
-          target="_blank"
-          rel="noreferrer"
-          className="underline"
-        >
-          ChatBot UI
-        </a>
-        .{' '}
-        {t(
-          "Chatbot UI is an advanced chatbot kit for OpenAI's chat models aiming to mimic ChatGPT's interface and functionality.",
-        )}
-      </div>
     </div>
   );
 };

@@ -1,13 +1,13 @@
 import { Message } from '@/types/chat';
 import { rehypeEmoji, toEmojiHtml } from '@/utils/app/emoji';
 import {
+  IconBrandOpenai,
   IconCheck,
   IconCopy,
   IconEdit,
   IconFile,
   IconFileText,
   IconReload,
-  IconRobot,
   IconX,
 } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
@@ -109,19 +109,21 @@ export const ChatMessage: FC<Props> = memo(
 
     return (
       <div
-        className={`group px-4 ${
+        className={`group w-full px-4 py-5 md:px-6 md:py-6 ${
           message.role === 'assistant'
-            ? 'border-b border-black/10 bg-gray-50 text-gray-800 dark:border-gray-900/50 dark:bg-[#444654] dark:text-gray-100'
-            : 'border-b border-black/10 bg-white text-gray-800 dark:border-gray-900/50 dark:bg-[#343541] dark:text-gray-100'
+            ? 'bg-gray-50 dark:bg-[#444654]'
+            : 'bg-white dark:bg-[#343541]'
         }`}
         style={{ overflowWrap: 'anywhere' }}
       >
-        <div className="relative m-auto flex gap-4 p-4 text-base md:max-w-2xl md:gap-6 md:py-6 lg:max-w-3xl lg:px-0">
-          {message.role === 'assistant' ? (
-            <div className="min-w-[40px] text-right font-bold">
-              <IconRobot size={30} />
+        <div className="relative m-auto flex max-w-[48rem] gap-4 text-base">
+          {message.role === 'assistant' && (
+            <div className="flex shrink-0 items-start">
+              <div className="rounded-full bg-black/5 p-1.5 dark:bg-white/10">
+                <IconBrandOpenai size={20} />
+              </div>
             </div>
-          ) : null}
+          )}
 
           <div className="w-full">
             {message.role === 'user' ? (
@@ -130,7 +132,7 @@ export const ChatMessage: FC<Props> = memo(
                   <div className="flex w-full flex-col">
                     <textarea
                       ref={textareaRef}
-                      className="w-full resize-none whitespace-pre-wrap border-none dark:bg-[#343541]"
+                      className="w-full resize-none whitespace-pre-wrap border-none bg-transparent"
                       value={messageContent}
                       onChange={handleInputChange}
                       onKeyDown={handlePressEnter}
@@ -167,64 +169,60 @@ export const ChatMessage: FC<Props> = memo(
                   </div>
                 ) : (
                   <>
-                    <div className="flex w-full justify-end">
-                      <div className="relative max-w-[85%] rounded-[22px] bg-[#ececec] px-4 py-2.5 text-[#0d0d0d] whitespace-pre-wrap dark:bg-[#3a3b40] dark:text-white">
-                        {message.attachments &&
-                          message.attachments.length > 0 && (
-                            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                              {message.attachments.map((attachment, index) =>
-                                attachment.type === 'image' &&
-                                attachment.dataUrl ? (
-                                  <button
-                                    key={index}
-                                    className="overflow-hidden rounded-lg transition-opacity hover:opacity-80"
-                                    onClick={() =>
-                                      setLightboxUrl(attachment.dataUrl)
-                                    }
-                                    title={attachment.fileName}
-                                  >
-                                    <img
-                                      src={attachment.dataUrl}
-                                      alt={attachment.fileName}
-                                      className="h-16 w-16 bg-white/40 object-cover"
-                                    />
-                                  </button>
+                    {message.attachments &&
+                      message.attachments.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {message.attachments.map((attachment, index) =>
+                            attachment.type === 'image' &&
+                            attachment.dataUrl ? (
+                              <button
+                                key={index}
+                                className="overflow-hidden rounded-lg transition-opacity hover:opacity-80"
+                                onClick={() =>
+                                  setLightboxUrl(attachment.dataUrl)
+                                }
+                                title={attachment.fileName}
+                              >
+                                <img
+                                  src={attachment.dataUrl}
+                                  alt={attachment.fileName}
+                                  className="h-16 w-16 bg-white/40 object-cover"
+                                />
+                              </button>
+                            ) : (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-xs dark:bg-white/10"
+                              >
+                                {attachment.extracted ? (
+                                  <IconFileText
+                                    size={13}
+                                    className="shrink-0"
+                                  />
                                 ) : (
-                                  <div
-                                    key={index}
-                                    className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-xs dark:bg-white/10"
-                                  >
-                                    {attachment.extracted ? (
-                                      <IconFileText
-                                        size={13}
-                                        className="shrink-0"
-                                      />
-                                    ) : (
-                                      <IconFile
-                                        size={13}
-                                        className="shrink-0"
-                                      />
-                                    )}
-                                    <span className="max-w-[180px] truncate">
-                                      {attachment.fileName}
-                                    </span>
-                                  </div>
-                                ),
-                              )}
-                            </div>
+                                  <IconFile
+                                    size={13}
+                                    className="shrink-0"
+                                  />
+                                )}
+                                <span className="max-w-[180px] truncate">
+                                  {attachment.fileName}
+                                </span>
+                              </div>
+                            ),
                           )}
+                        </div>
+                      )}
 
-                        <div
-                          className="prose dark:prose-invert"
-                          style={{ fontSize }}
-                          dangerouslySetInnerHTML={{
-                            __html: toEmojiHtml(message.content),
-                          }}
-                        />
-                      </div>
-                    </div>
+                    <div
+                      className="prose dark:prose-invert"
+                      style={{ fontSize }}
+                      dangerouslySetInnerHTML={{
+                        __html: toEmojiHtml(message.content),
+                      }}
+                    />
 
-                    <div className="flex w-full justify-end">
+                    <div className="flex w-full justify-start">
                       <button
                         className="mt-1 translate-x-[1000px] rounded-md p-2 text-gray-500 hover:text-gray-700 focus:translate-x-0 group-hover:translate-x-0 max-sm:translate-x-0 md:p-1 dark:text-gray-400 dark:hover:text-gray-300"
                         onClick={toggleEditing}
@@ -238,6 +236,10 @@ export const ChatMessage: FC<Props> = memo(
               </div>
             ) : (
               <div className="w-full">
+                <div className="mb-1.5 font-semibold text-neutral-700 dark:text-neutral-200">
+                  {t('ChatGPT')}
+                </div>
+
                 <div
                   className="prose dark:prose-invert"
                   style={{ fontSize }}

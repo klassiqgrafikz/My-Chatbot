@@ -14,6 +14,7 @@ import {
   fallbackModelID,
 } from '@/types/openai';
 import { Plugin, PluginKey } from '@/types/plugin';
+import { DEFAULT_VOICE_SETTINGS, VoiceSettings } from '@/types/voice';
 import { Prompt } from '@/types/prompt';
 import { AIProvider, DEFAULT_PROVIDERS } from '@/types/provider';
 import { getEndpoint } from '@/utils/app/api';
@@ -70,6 +71,7 @@ const Home: React.FC<HomeProps> = ({
   const [continueEnabled, setContinueEnabled] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [chatFontSize, setChatFontSize] = useState<number>(16);
+  const [voice, setVoice] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS);
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
@@ -566,6 +568,11 @@ const Home: React.FC<HomeProps> = ({
     localStorage.setItem('chatFontSize', String(next));
   };
 
+  const handleVoiceChange = (next: VoiceSettings) => {
+    setVoice(next);
+    localStorage.setItem('voiceSettings', JSON.stringify(next));
+  };
+
   const handleOpenSettings = () => {
     closeMobileSidebar();
     setShowSettings(true);
@@ -947,6 +954,14 @@ const Home: React.FC<HomeProps> = ({
       }
     }
 
+    const storedVoice = localStorage.getItem('voiceSettings');
+    if (storedVoice) {
+      try {
+        const parsed = JSON.parse(storedVoice);
+        setVoice({ ...DEFAULT_VOICE_SETTINGS, ...parsed });
+      } catch (e) {}
+    }
+
     let loadedProviders: AIProvider[] = [];
     const storedProviders = localStorage.getItem('providers');
     if (storedProviders) {
@@ -1161,6 +1176,7 @@ const Home: React.FC<HomeProps> = ({
                 loading={loading}
                 prompts={prompts}
                 fontSize={chatFontSize}
+                voice={voice}
                 onSend={handleSend}
                 onUpdateConversation={handleUpdateConversation}
                 onEditMessage={handleEditMessage}
@@ -1187,10 +1203,12 @@ const Home: React.FC<HomeProps> = ({
             pluginKeys={pluginKeys}
             conversationsCount={conversations.length}
             fontSize={chatFontSize}
+            voice={voice}
             onClose={handleCloseSettings}
             onToggleLightMode={handleLightMode}
             onFontSizeChange={handleFontSizeChange}
             onFontSizeSet={handleFontSizeSet}
+            onVoiceChange={handleVoiceChange}
             onUpdateProvider={handleUpdateProvider}
             onSelectProvider={handleSelectProvider}
             onAddProvider={handleAddProvider}

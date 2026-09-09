@@ -4,8 +4,13 @@ import { ErrorMessage } from '@/types/error';
 import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
+import { VoiceSettings } from '@/types/voice';
 import { throttle } from '@/utils';
-import { IconArrowDown } from '@tabler/icons-react';
+import {
+  IconArrowDown,
+  IconArrowUpRight,
+  IconBrandOpenai,
+} from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import {
   FC,
@@ -21,6 +26,7 @@ import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
+import { useVoiceOutput } from './useVoiceOutput';
 
 interface Props {
   conversation: Conversation;
@@ -33,6 +39,7 @@ interface Props {
   loading: boolean;
   prompts: Prompt[];
   fontSize: number;
+  voice?: VoiceSettings;
   onSend: (
     message: Message,
     deleteCount: number,
@@ -68,6 +75,7 @@ export const Chat: FC<Props> = memo(
     loading,
     prompts,
     fontSize,
+    voice,
     onSend,
     onUpdateConversation,
     onEditMessage,
@@ -85,6 +93,37 @@ export const Chat: FC<Props> = memo(
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const { playText, stop } = useVoiceOutput(voice);
+    const wasStreamingRef = useRef(messageIsStreaming);
+
+    useEffect(() => {
+      const startedStreaming = !wasStreamingRef.current && messageIsStreaming;
+      const finishedStreaming = wasStreamingRef.current && !messageIsStreaming;
+      wasStreamingRef.current = messageIsStreaming;
+
+      if (startedStreaming) {
+        stop();
+      }
+
+      if (
+        finishedStreaming &&
+        voice?.enabled &&
+        voice.autoPlay &&
+        conversation.messages.length > 0
+      ) {
+        const last = conversation.messages[conversation.messages.length - 1];
+        if (last.role === 'assistant' && last.content) {
+          void playText(last.content);
+        }
+      }
+    }, [
+      messageIsStreaming,
+      conversation.messages,
+      voice,
+      playText,
+      stop,
+    ]);
 
     const scrollToBottom = useCallback(() => {
       if (autoScrollEnabled) {
@@ -215,23 +254,28 @@ export const Chat: FC<Props> = memo(
                 onScroll={handleScroll}
               >
                 {conversation.messages.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center space-y-6 px-4">
-                    <div className="text-center text-2xl font-semibold text-black dark:text-white sm:text-3xl">
+                  <div className="flex h-full flex-col items-center justify-center gap-8 px-4 py-10">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <div className="flex items-center justify-center">
+                        <IconBrandOpenai size={44} />
+                      </div>
                       {models.length === 0 ? (
                         <div>
                           <Spinner size="16px" className="mx-auto" />
                         </div>
                       ) : (
-                        t('What can I help with?')
+                        <div className="text-2xl font-semibold text-black dark:text-white sm:text-3xl">
+                          {t('What can I help with?')}
+                        </div>
                       )}
                     </div>
 
                     {models.length > 0 && (
-                      <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
                         {SUGGESTIONS.map((suggestion) => (
                           <button
                             key={suggestion}
-                            className="cursor-pointer rounded-2xl border border-black/10 p-4 text-left text-sm text-neutral-600 transition-colors duration-200 hover:bg-black/5 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-white/5"
+                            className="group cursor-pointer rounded-2xl border border-black/10 bg-white p-4 text-left text-sm text-neutral-700 transition-colors duration-200 hover:bg-gray-100 disabled:opacity-40 dark:border-white/10 dark:bg-[#3E3F4B] dark:text-neutral-200 dark:hover:bg-[#454651]"
                             disabled={messageIsStreaming}
                             onClick={() =>
                               onSend(
@@ -241,6 +285,12 @@ export const Chat: FC<Props> = memo(
                               )
                             }
                           >
+                            <div className="mb-2 flex justify-end">
+                              <IconArrowUpRight
+                                size={16}
+                                className="text-neutral-400 transition-colors group-hover:text-black dark:group-hover:text-white"
+                              />
+                            </div>
                             {suggestion}
                           </button>
                         ))}
@@ -286,6 +336,7 @@ export const Chat: FC<Props> = memo(
                 conversationIsEmpty={conversation.messages.length === 0}
                 prompts={prompts}
                 fontSize={fontSize}
+                voice={voice}
                 onStop={onStop}
                 showContinue={showContinue}
                 onContinue={onContinue}

@@ -1,11 +1,13 @@
 import { SupportedExportFormats } from '@/types/export';
 import { PluginKey } from '@/types/plugin';
 import { AIProvider } from '@/types/provider';
+import { VoiceSettings } from '@/types/voice';
 import {
   IconArrowBigDown,
   IconArrowBigUp,
   IconFileExport,
   IconLetterA,
+  IconMicrophone2,
   IconMoon,
   IconSun,
   IconX,
@@ -18,6 +20,9 @@ import { Import } from './Import';
 import { PluginKeysSection } from './PluginKeysSection';
 import { Providers } from './Providers';
 
+const FONT_MIN = 14;
+const FONT_MAX = 22;
+
 interface Props {
   open: boolean;
   lightMode: 'light' | 'dark';
@@ -29,10 +34,12 @@ interface Props {
   pluginKeys: PluginKey[];
   conversationsCount: number;
   fontSize: number;
+  voice?: VoiceSettings;
   onClose: () => void;
   onToggleLightMode: (mode: 'light' | 'dark') => void;
   onFontSizeChange: (delta: number) => void;
   onFontSizeSet: (px: number) => void;
+  onVoiceChange?: (settings: VoiceSettings) => void;
   onUpdateProvider: (provider: AIProvider) => void;
   onSelectProvider: (providerId: string) => void;
   onAddProvider: (name: string, apiHost: string, apiKey: string) => void;
@@ -43,9 +50,6 @@ interface Props {
   onPluginKeyChange: (pluginKey: PluginKey) => void;
   onClearPluginKey: (pluginKey: PluginKey) => void;
 }
-
-const FONT_MIN = 14;
-const FONT_MAX = 22;
 
 const Panel = ({ title, children }: { title: string; children: any }) => (
   <section className="border-b border-white/10 px-6 py-5">
@@ -67,10 +71,12 @@ export const SettingsDrawer: FC<Props> = ({
   pluginKeys,
   conversationsCount,
   fontSize,
+  voice,
   onClose,
   onToggleLightMode,
   onFontSizeChange,
   onFontSizeSet,
+  onVoiceChange,
   onUpdateProvider,
   onSelectProvider,
   onAddProvider,
@@ -209,6 +215,154 @@ export const SettingsDrawer: FC<Props> = ({
               onPluginKeyChange={onPluginKeyChange}
               onClearPluginKey={onClearPluginKey}
             />
+          </Panel>
+
+          <Panel title={t('Voice')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-neutral-300">
+                <IconMicrophone2 size={16} className="text-neutral-400" />
+                {t('Voice chat')}
+              </div>
+              <button
+                role="switch"
+                aria-checked={voice?.enabled ?? false}
+                onClick={() =>
+                  onVoiceChange?.({
+                    ...voice!,
+                    enabled: !voice?.enabled,
+                  })
+                }
+                className={`relative h-[26px] w-[46px] rounded-full transition-colors ${
+                  voice?.enabled ? 'bg-white/90' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`absolute top-[3px] left-[3px] h-[20px] w-[20px] rounded-full shadow transition-transform ${
+                    voice?.enabled
+                      ? 'translate-x-[20px] bg-black'
+                      : 'translate-x-0 bg-white'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {voice?.enabled && (
+              <div className="mt-4 flex flex-col gap-4">
+                <label className="block">
+                  <span className="mb-1.5 block text-sm text-neutral-300">
+                    {t('FishAudio API key')}
+                  </span>
+                  <input
+                    type="password"
+                    className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/30"
+                    placeholder="sk-..."
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={voice?.fishApiKey ?? ''}
+                    onChange={(e) =>
+                      onVoiceChange?.({
+                        ...voice!,
+                        fishApiKey: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+
+                <details className="rounded-lg border border-white/10 p-3 text-sm text-neutral-300">
+                  <summary className="cursor-pointer select-none">
+                    {t('Advanced options')}
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-4">
+                    <label className="block">
+                      <span className="mb-1.5 block text-neutral-300">
+                        {t('Voice ID (reference_id) — for cloned voices')}
+                      </span>
+                      <input
+                        className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/30"
+                        placeholder={t('Leave empty for default voice') as string}
+                        value={voice?.referenceId ?? ''}
+                        onChange={(e) =>
+                          onVoiceChange?.({
+                            ...voice!,
+                            referenceId: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-neutral-300">
+                        {t('Speed')} · {voice?.speed?.toFixed(1) ?? '1.0'}
+                      </span>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={1.5}
+                        step={0.05}
+                        value={voice?.speed ?? 1}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-600 accent-white"
+                        onChange={(e) =>
+                          onVoiceChange?.({
+                            ...voice!,
+                            speed: parseFloat(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-neutral-300">
+                        {t('Transcript language')}
+                      </span>
+                      <input
+                        className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/30"
+                        placeholder="en"
+                        value={voice?.language ?? 'en'}
+                        onChange={(e) =>
+                          onVoiceChange?.({
+                            ...voice!,
+                            language: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                </details>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-neutral-300">
+                    {t('Speak responses aloud')}
+                  </span>
+                  <button
+                    role="switch"
+                    aria-checked={voice?.autoPlay ?? true}
+                    onClick={() =>
+                      onVoiceChange?.({
+                        ...voice!,
+                        autoPlay: !voice?.autoPlay,
+                      })
+                    }
+                    className={`relative h-[26px] w-[46px] rounded-full transition-colors ${
+                      voice?.autoPlay ? 'bg-white/90' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-[3px] left-[3px] h-[20px] w-[20px] rounded-full shadow transition-transform ${
+                        voice?.autoPlay
+                          ? 'translate-x-[20px] bg-black'
+                          : 'translate-x-0 bg-white'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <p className="text-xs leading-relaxed text-neutral-400">
+                  {t(
+                    'Uses FishAudio free tier (~2,000 credits/month). The mic button appears in the chat input when voice chat is enabled.',
+                  )}
+                </p>
+              </div>
+            )}
           </Panel>
 
           <Panel title={t('Data')}>
