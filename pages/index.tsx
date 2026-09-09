@@ -1102,7 +1102,7 @@ const Home: React.FC<HomeProps> = ({
         <main
           className={`flex h-screen w-screen flex-col text-sm text-white dark:text-white ${lightMode}`}
         >
-          <div className="fixed top-0 w-full sm:hidden">
+          <div className="sticky top-0 z-40 w-full sm:hidden">
             <Navbar
               selectedConversation={selectedConversation}
               onNewConversation={handleNewConversation}
@@ -1111,7 +1111,7 @@ const Home: React.FC<HomeProps> = ({
             />
           </div>
 
-          <div className="relative flex h-full w-full pt-[48px] sm:pt-0">
+          <div className="relative flex min-h-0 w-full flex-1">
             <div
               onClick={handleToggleChatbar}
               className={`absolute inset-0 z-10 bg-black/70 transition-opacity duration-300 sm:hidden ${
