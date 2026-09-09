@@ -6,6 +6,7 @@ import {
 } from '@/types/provider';
 import { AIProvider } from '@/types/provider';
 import { CONTINUE_SENTINEL } from '@/utils/app/const';
+import { toOpenAIMessage } from '@/utils/server/openaiMessage';
 import {
   createParser,
   ParsedEvent,
@@ -78,7 +79,9 @@ export const OpenAIStream = async (
           role: 'system',
           content: systemPrompt,
         },
-        ...messages,
+        ...messages.map((message) =>
+          toOpenAIMessage(message, !!model.supportsVision),
+        ),
       ],
       max_tokens: maxTokens,
       temperature: 1,

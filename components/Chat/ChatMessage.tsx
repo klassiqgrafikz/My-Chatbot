@@ -4,8 +4,11 @@ import {
   IconCheck,
   IconCopy,
   IconEdit,
+  IconFile,
+  IconFileText,
   IconReload,
   IconRobot,
+  IconX,
 } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, memo, useEffect, useRef, useState } from 'react';
@@ -30,6 +33,7 @@ export const ChatMessage: FC<Props> = memo(
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [messageContent, setMessageContent] = useState(message.content);
     const [messagedCopied, setMessageCopied] = useState(false);
+    const [lightboxUrl, setLightboxUrl] = useState<string>();
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,6 +82,22 @@ export const ChatMessage: FC<Props> = memo(
         textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
       }
     }, [isEditing]);
+
+    useEffect(() => {
+      if (!lightboxUrl) return;
+
+      const handleKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setLightboxUrl(undefined);
+        }
+      };
+
+      window.addEventListener('keydown', handleKey);
+
+      return () => {
+        window.removeEventListener('keydown', handleKey);
+      };
+    }, [lightboxUrl]);
 
     return (
       <div
@@ -141,6 +161,51 @@ export const ChatMessage: FC<Props> = memo(
                   <>
                     <div className="flex w-full justify-end">
                       <div className="relative max-w-[85%] rounded-[22px] bg-[#ececec] px-4 py-2.5 text-[#0d0d0d] whitespace-pre-wrap">
+                        {message.attachments &&
+                          message.attachments.length > 0 && (
+                            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                              {message.attachments.map((attachment, index) =>
+                                attachment.type === 'image' &&
+                                attachment.dataUrl ? (
+                                  <button
+                                    key={index}
+                                    className="overflow-hidden rounded-lg transition-opacity hover:opacity-80"
+                                    onClick={() =>
+                                      setLightboxUrl(attachment.dataUrl)
+                                    }
+                                    title={attachment.fileName}
+                                  >
+                                    <img
+                                      src={attachment.dataUrl}
+                                      alt={attachment.fileName}
+                                      className="h-16 w-16 bg-white/40 object-cover"
+                                    />
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={index}
+                                    className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-xs dark:bg-black/20"
+                                  >
+                                    {attachment.extracted ? (
+                                      <IconFileText
+                                        size={13}
+                                        className="shrink-0"
+                                      />
+                                    ) : (
+                                      <IconFile
+                                        size={13}
+                                        className="shrink-0"
+                                      />
+                                    )}
+                                    <span className="max-w-[180px] truncate">
+                                      {attachment.fileName}
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+
                         <div
                           className="prose dark:prose-invert"
                           style={{ fontSize }}
@@ -246,6 +311,26 @@ export const ChatMessage: FC<Props> = memo(
             )}
           </div>
         </div>
+
+        {lightboxUrl && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-6"
+            onClick={() => setLightboxUrl(undefined)}
+          >
+            <img
+              src={lightboxUrl}
+              alt="Attachment"
+              className="max-h-[85vh] max-w-[90vw] rounded-lg"
+            />
+            <button
+              className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              onClick={() => setLightboxUrl(undefined)}
+              title={t('Close') as string}
+            >
+              <IconX size={20} />
+            </button>
+          </div>
+        )}
       </div>
     );
   },

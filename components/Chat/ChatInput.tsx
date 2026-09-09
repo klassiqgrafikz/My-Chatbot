@@ -1,18 +1,31 @@
-import { Conversation, Message } from '@/types/chat';
+import { Attachment, Conversation, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { OpenAIModel } from '@/types/openai';
 import { Plugin } from '@/types/plugin';
 import { Prompt } from '@/types/prompt';
 import {
+  MAX_FILES_PER_MESSAGE,
+  MAX_IMAGES_PER_MESSAGE,
+  MAX_TOTAL_BYTES,
+  fileToAttachment,
+  isImageFile,
+} from '@/utils/app/attachments';
+import {
   IconBolt,
   IconBrandGoogle,
   IconChevronDown,
+  IconFile,
+  IconFileText,
+  IconFolder,
+  IconPaperclip,
   IconPlayerPlay,
   IconPlayerStop,
   IconRepeat,
   IconSend,
+  IconX,
 } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
+import toast from 'react-hot-toast';
 import {
   FC,
   KeyboardEvent,
@@ -82,8 +95,13 @@ export const ChatInput: FC<Props> = ({
   const [showPluginSelect, setShowPluginSelect] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [plugin, setPlugin] = useState<Plugin | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
@@ -112,17 +130,92 @@ export const ChatInput: FC<Props> = ({
       return;
     }
 
-    if (!content) {
+    if (!content && attachments.length === 0) {
       alert(t('Please enter a message'));
       return;
     }
 
-    onSend({ role: 'user', content }, plugin);
+    onSend(
+      {
+        role: 'user',
+        content: content || '',
+        ...(attachments.length > 0 ? { attachments } : {}),
+      },
+      plugin,
+    );
     setContent('');
+    setAttachments([]);
     setPlugin(null);
+    setShowAttachMenu(false);
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setShowAttachMenu(false);
+
+    const incoming = Array.from(files);
+    const existingCount = attachments.length;
+
+    if (incoming.reduce((sum, file) => sum + file.size, 0) > MAX_TOTAL_BYTES) {
+      toast.error(
+        t('Total attachment size exceeds {{size}} MB.', {
+          size: MAX_TOTAL_BYTES / (1024 * 1024),
+        }),
+      );
+      return;
+    }
+
+    let imageCount = attachments.filter((a) => a.type === 'image').length;
+    const result: Attachment[] = [];
+
+    for (const file of incoming) {
+      if (existingCount + result.length >= MAX_FILES_PER_MESSAGE) {
+        toast.error(
+          t('Maximum {{n}} files per message.', {
+            n: MAX_FILES_PER_MESSAGE,
+          }),
+        );
+        break;
+      }
+
+      if (isImageFile(file)) {
+        if (!model.supportsVision) {
+          toast.error(t("Selected model doesn't support images."));
+          continue;
+        }
+        if (imageCount >= MAX_IMAGES_PER_MESSAGE) {
+          toast.error(
+            t('Maximum {{n}} images per message.', {
+              n: MAX_IMAGES_PER_MESSAGE,
+            }),
+          );
+          break;
+        }
+      }
+
+      try {
+        const attachment = await fileToAttachment(file, !!model.supportsVision);
+        if (attachment.type === 'image') {
+          imageCount++;
+        }
+        result.push(attachment);
+      } catch (error) {
+        console.error('Failed to read file', file.name, error);
+        toast.error(t('Could not read {{name}}.', { name: file.name }));
+      }
+    }
+
+    if (result.length > 0) {
+      setAttachments((prev) => [...prev, ...result]);
     }
   };
 
@@ -192,6 +285,7 @@ export const ChatInput: FC<Props> = ({
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setShowModelPicker(false);
+      setShowAttachMenu(false);
     }
   };
 
@@ -270,6 +364,13 @@ export const ChatInput: FC<Props> = ({
         !promptListRef.current.contains(e.target as Node)
       ) {
         setShowPromptList(false);
+      }
+
+      if (
+        attachMenuRef.current &&
+        !attachMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowAttachMenu(false);
       }
     };
 
@@ -351,11 +452,127 @@ export const ChatInput: FC<Props> = ({
         )}
 
         <div className="relative flex w-full flex-col">
-          <div className="relative flex items-end rounded-[28px] border border-black/10 bg-white px-2 py-2 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
-            <button
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
-              onClick={() => setShowPluginSelect(!showPluginSelect)}
-            >
+          <div className="relative flex flex-col rounded-[28px] border border-black/10 bg-white px-2 py-2 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pb-1 pl-1">
+                {attachments.map((attachment, index) => (
+                  <div
+                    key={`${attachment.fileName}-${index}`}
+                    className="relative"
+                  >
+                    {attachment.type === 'image' ? (
+                      <div className="relative h-14 w-14 overflow-hidden rounded-lg">
+                        <img
+                          src={attachment.dataUrl}
+                          alt={attachment.fileName}
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                          onClick={() => removeAttachment(index)}
+                          title={t('Remove') as string}
+                        >
+                          <IconX size={10} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 rounded-md bg-black/5 py-1 pr-1 pl-1.5 text-xs dark:bg-white/10">
+                        {attachment.extracted ? (
+                          <IconFileText
+                            size={13}
+                            className="shrink-0 text-neutral-500"
+                          />
+                        ) : (
+                          <IconFile
+                            size={13}
+                            className="shrink-0 text-neutral-500"
+                          />
+                        )}
+                        <span className="max-w-[140px] truncate">
+                          {attachment.fileName}
+                        </span>
+                        <button
+                          className="flex h-4 w-4 items-center justify-center rounded-full text-neutral-500 hover:bg-black/10 dark:text-neutral-300 dark:hover:bg-white/10"
+                          onClick={() => removeAttachment(index)}
+                          title={t('Remove') as string}
+                        >
+                          <IconX size={10} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-end">
+              <div ref={attachMenuRef} className="relative">
+                <button
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-white/10"
+                  onClick={() => {
+                    setShowPluginSelect(false);
+                    setShowPromptList(false);
+                    setShowAttachMenu(!showAttachMenu);
+                  }}
+                  disabled={!!plugin}
+                  title={
+                    plugin
+                      ? (t('Uploads are not available with plugins') as string)
+                      : (t('Attach files') as string)
+                  }
+                >
+                  <IconPaperclip size={20} />
+                </button>
+
+                {showAttachMenu && (
+                  <div className="absolute bottom-full left-0 z-30 mb-2 w-52 rounded-lg border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-600 dark:bg-[#343541]">
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                      onClick={() => filesInputRef.current?.click()}
+                    >
+                      <IconPaperclip size={16} />
+                      {t('Upload files')}
+                    </button>
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                      onClick={() => folderInputRef.current?.click()}
+                    >
+                      <IconFolder size={16} />
+                      {t('Upload folder')}
+                    </button>
+                  </div>
+                )}
+
+                <input
+                  ref={filesInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              <button
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                onClick={() => {
+                  setShowAttachMenu(false);
+                  setShowPluginSelect(!showPluginSelect);
+                }}
+              >
               {plugin ? (
                 <IconBrandGoogle size={20} />
               ) : (
@@ -425,12 +642,16 @@ export const ChatInput: FC<Props> = ({
                 />
               </div>
             )}
+            </div>
           </div>
 
           <div className="flex items-center gap-1 px-2 pt-1.5">
             <button
               className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
-              onClick={() => setShowModelPicker(!showModelPicker)}
+              onClick={() => {
+                setShowAttachMenu(false);
+                setShowModelPicker(!showModelPicker);
+              }}
               title={t('Model settings') as string}
             >
               <span className="max-w-[200px] truncate">

@@ -4,11 +4,13 @@ export interface OpenAIModel {
   maxLength: number; // maximum length of a message
   tokenLimit: number;
   isFree?: boolean; // whether the provider lists this model as free
+  supportsVision?: boolean; // whether the model accepts image inputs
 }
 
 export enum OpenAIModelID {
   GPT_3_5 = 'gpt-3.5-turbo',
   GPT_4 = 'gpt-4',
+  GPT_4O = 'gpt-4o',
 }
 
 // in case the `DEFAULT_MODEL` environment variable is not set or set to an unsupported model
@@ -27,4 +29,31 @@ export const OpenAIModels: Record<OpenAIModelID, OpenAIModel> = {
     maxLength: 24000,
     tokenLimit: 8000,
   },
+  [OpenAIModelID.GPT_4O]: {
+    id: OpenAIModelID.GPT_4O,
+    name: 'GPT-4o',
+    maxLength: 24000,
+    tokenLimit: 8000,
+    supportsVision: true,
+  },
+};
+
+export const isVisionModel = (modelId: string): boolean => {
+  const id = modelId.toLowerCase();
+
+  return (
+    id.includes('vision') ||
+    id.startsWith('gpt-4o') ||
+    id.startsWith('gpt-4.5') ||
+    id.startsWith('o1') ||
+    id.startsWith('o3') ||
+    id.startsWith('o4') ||
+    id.startsWith('gemini') ||
+    id.startsWith('claude') ||
+    id.includes('qwen') && id.includes('vl') ||
+    id.includes('llava') ||
+    id.includes('phi-3-vision') ||
+    id.includes('moondream') ||
+    id.includes('idefics')
+  );
 };

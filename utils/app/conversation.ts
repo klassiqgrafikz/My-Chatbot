@@ -22,9 +22,17 @@ export const updateConversation = (
 };
 
 export const saveConversation = (conversation: Conversation) => {
-  localStorage.setItem('selectedConversation', JSON.stringify(conversation));
+  try {
+    localStorage.setItem('selectedConversation', JSON.stringify(conversation));
+  } catch (error) {
+    console.warn('Failed to save conversation to localStorage.', error);
+  }
 };
 
 export const saveConversations = (conversations: Conversation[]) => {
-  localStorage.setItem('conversationHistory', JSON.stringify(conversations));
+  try {
+    localStorage.setItem('conversationHistory', JSON.stringify(conversations));
+  } catch (error) {
+    console.warn('Failed to save conversation history to localStorage.', error);
+  }
 };

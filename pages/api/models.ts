@@ -1,4 +1,4 @@
-import { OpenAIModel, OpenAIModels } from '@/types/openai';
+import { OpenAIModel, OpenAIModels, isVisionModel } from '@/types/openai';
 import {
   AIProvider,
   getProviderApiHost,
@@ -109,6 +109,9 @@ const handler = async (req: Request): Promise<Response> => {
             ? knownModel.tokenLimit
             : MODEL_DEFAULT_TOKEN_LIMIT,
           isFree: knownModel ? !!knownModel.isFree : isFreeModel(model),
+          supportsVision: knownModel
+            ? !!knownModel.supportsVision
+            : isVisionModel(model.id),
         };
       })
       .sort((a: OpenAIModel, b: OpenAIModel) =>

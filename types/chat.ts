@@ -1,9 +1,19 @@
 import { OpenAIModel } from './openai';
 import { AIProvider } from './provider';
 
+export interface Attachment {
+  type: 'image' | 'file';
+  fileName: string;
+  mimeType: string;
+  dataUrl?: string;
+  rawText?: string;
+  extracted?: boolean;
+}
+
 export interface Message {
   role: Role;
   content: string;
+  attachments?: Attachment[];
 }
 
 export type Role = 'assistant' | 'user';
