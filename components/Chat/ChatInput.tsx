@@ -8,6 +8,7 @@ import {
   MAX_IMAGES_PER_MESSAGE,
   MAX_TOTAL_BYTES,
   fileToAttachment,
+  formatMB,
   isImageFile,
 } from '@/utils/app/attachments';
 import {
@@ -36,6 +37,7 @@ import {
   useState,
 } from 'react';
 import { ModelSelect } from './ModelSelect';
+import { ConfirmDialog } from './ConfirmDialog';
 import { PluginSelect } from './PluginSelect';
 import { PromptList } from './PromptList';
 import { SystemPrompt } from './SystemPrompt';
@@ -97,6 +99,9 @@ export const ChatInput: FC<Props> = ({
   const [plugin, setPlugin] = useState<Plugin | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [pendingSizeMb, setPendingSizeMb] = useState(0);
+  const [pendingAboveCap, setPendingAboveCap] = useState(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
@@ -157,22 +162,41 @@ export const ChatInput: FC<Props> = ({
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addFiles = async (files: FileList | null) => {
+  const onFilesPicked = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+
+    setShowAttachMenu(false);
+
+    const files = Array.from(fileList);
+    const incomingBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const existingBytes = attachments.reduce(
+      (sum, a) => sum + (a.dataUrl?.length || 0) + (a.rawText?.length || 0),
+      0,
+    );
+
+    setPendingFiles(files);
+    setPendingSizeMb(incomingBytes / (1024 * 1024));
+    setPendingAboveCap(incomingBytes + existingBytes > MAX_TOTAL_BYTES);
+  };
+
+  const acceptPendingFiles = () => {
+    setPendingFiles(null);
+    if (pendingFiles) {
+      addFiles(pendingFiles);
+    }
+  };
+
+  const declinePendingFiles = () => {
+    setPendingFiles(null);
+  };
+
+  const addFiles = async (files: File[]) => {
     if (!files || files.length === 0) return;
 
     setShowAttachMenu(false);
 
-    const incoming = Array.from(files);
+    const incoming = files;
     const existingCount = attachments.length;
-
-    if (incoming.reduce((sum, file) => sum + file.size, 0) > MAX_TOTAL_BYTES) {
-      toast.error(
-        t('Total attachment size exceeds {{size}} MB.', {
-          size: MAX_TOTAL_BYTES / (1024 * 1024),
-        }),
-      );
-      return;
-    }
 
     let imageCount = attachments.filter((a) => a.type === 'image').length;
     const result: Attachment[] = [];
@@ -549,7 +573,7 @@ export const ChatInput: FC<Props> = ({
                   multiple
                   hidden
                   onChange={(e) => {
-                    addFiles(e.target.files);
+                    onFilesPicked(e.target.files);
                     e.target.value = '';
                   }}
                 />
@@ -560,7 +584,7 @@ export const ChatInput: FC<Props> = ({
                   hidden
                   {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
                   onChange={(e) => {
-                    addFiles(e.target.files);
+                    onFilesPicked(e.target.files);
                     e.target.value = '';
                   }}
                 />
@@ -674,6 +698,17 @@ export const ChatInput: FC<Props> = ({
           variables={variables}
           onSubmit={handleSubmit}
           onClose={() => setIsModalVisible(false)}
+        />
+      )}
+
+      {pendingFiles && (
+        <ConfirmDialog
+          fileCount={pendingFiles.length}
+          sizeLabel={formatMB(pendingSizeMb * 1024 * 1024)}
+          aboveCap={pendingAboveCap}
+          maxMbLabel={formatMB(MAX_TOTAL_BYTES)}
+          onAccept={acceptPendingFiles}
+          onDecline={declinePendingFiles}
         />
       )}
 

@@ -7,6 +7,7 @@ import {
   SupportedExportFormats,
 } from '@/types/export';
 import { cleanConversationHistory } from './clean';
+import { stripConversationAttachments, stripConversationsAttachments } from './conversation';
 
 export function isExportFormatV1(obj: any): obj is ExportFormatV1 {
   return Array.isArray(obj);
@@ -112,11 +113,20 @@ export const importData = (
   const cleanedData = cleanData(data);
   const { history,folders, prompts } = cleanedData;
 
-  const conversations = history;
-  localStorage.setItem('conversationHistory', JSON.stringify(conversations));
+  const conversations = stripConversationsAttachments(history);
+  localStorage.setItem(
+    'conversationHistory',
+    JSON.stringify(conversations),
+  );
   localStorage.setItem(
     'selectedConversation',
-    JSON.stringify(conversations[conversations.length - 1]),
+    JSON.stringify(
+      conversations.length > 0
+        ? stripConversationAttachments(
+            conversations[conversations.length - 1],
+          )
+        : null,
+    ),
   );
 
   localStorage.setItem('folders', JSON.stringify(folders));

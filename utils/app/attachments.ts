@@ -2,11 +2,15 @@ import { Attachment } from '@/types/chat';
 
 export const MAX_IMAGES_PER_MESSAGE = 6;
 export const MAX_FILES_PER_MESSAGE = 10;
-export const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+export const MAX_TOTAL_BYTES = 300 * 1024 * 1024;
 export const MAX_IMAGE_DIMENSION = 1568;
 export const MAX_TEXT_LENGTH = 60000;
 export const MAX_PDF_PAGES = 15;
 export const MAX_PDF_LENGTH = 100000;
+
+export const formatMB = (bytes: number): string => {
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
 
 const TEXT_EXTENSIONS = [
   'txt',

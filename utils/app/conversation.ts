@@ -1,4 +1,28 @@
-import { Conversation } from '@/types/chat';
+import { Conversation, Message } from '@/types/chat';
+
+export const stripMessageAttachments = (message: Message): Message => {
+  if (!message.attachments) {
+    return message;
+  }
+  const { attachments, ...rest } = message;
+  void attachments;
+  return rest;
+};
+
+export const stripConversationAttachments = (
+  conversation: Conversation,
+): Conversation => {
+  return {
+    ...conversation,
+    messages: conversation.messages.map(stripMessageAttachments),
+  };
+};
+
+export const stripConversationsAttachments = (
+  conversations: Conversation[],
+): Conversation[] => {
+  return conversations.map(stripConversationAttachments);
+};
 
 export const updateConversation = (
   updatedConversation: Conversation,
@@ -23,7 +47,10 @@ export const updateConversation = (
 
 export const saveConversation = (conversation: Conversation) => {
   try {
-    localStorage.setItem('selectedConversation', JSON.stringify(conversation));
+    localStorage.setItem(
+      'selectedConversation',
+      JSON.stringify(stripConversationAttachments(conversation)),
+    );
   } catch (error) {
     console.warn('Failed to save conversation to localStorage.', error);
   }
@@ -31,7 +58,10 @@ export const saveConversation = (conversation: Conversation) => {
 
 export const saveConversations = (conversations: Conversation[]) => {
   try {
-    localStorage.setItem('conversationHistory', JSON.stringify(conversations));
+    localStorage.setItem(
+      'conversationHistory',
+      JSON.stringify(stripConversationsAttachments(conversations)),
+    );
   } catch (error) {
     console.warn('Failed to save conversation history to localStorage.', error);
   }
