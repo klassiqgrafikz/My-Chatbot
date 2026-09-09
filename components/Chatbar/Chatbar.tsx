@@ -24,6 +24,7 @@ interface Props {
   folders: Folder[];
   prompts: Prompt[];
   collapsed: boolean;
+  mobileOpen: boolean;
   onOpenSettings: () => void;
   onCreateFolder: (name: string, type: FolderType) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -47,6 +48,7 @@ export const Chatbar: FC<Props> = ({
   folders,
   prompts,
   collapsed,
+  mobileOpen,
   onOpenSettings,
   onCreateFolder,
   onDeleteFolder,
@@ -163,7 +165,9 @@ export const Chatbar: FC<Props> = ({
   if (collapsed) {
     return (
       <div
-        className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-[280px] flex-none flex-col items-center gap-1 bg-[#202123] p-2 transition-all sm:relative sm:top-0 sm:w-[68px]`}
+        className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-[280px] flex-none flex-col items-center gap-1 bg-[#202123] p-2 transition-all sm:relative sm:top-0 sm:w-[68px] sm:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         <button
           className="flex h-10 w-10 flex-shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-white/20 text-white transition-colors duration-200 hover:bg-gray-500/10"
@@ -199,7 +203,9 @@ export const Chatbar: FC<Props> = ({
 
   return (
     <div
-      className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-[280px] flex-none flex-col space-y-2 bg-[#202123] p-2 transition-all sm:relative sm:top-0`}
+      className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-[280px] flex-none flex-col space-y-2 bg-[#202123] p-2 transition-all sm:relative sm:top-0 sm:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
     >
       <div className="flex items-center">
         <button

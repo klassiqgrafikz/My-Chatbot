@@ -120,7 +120,7 @@ export const SettingsDrawer: FC<Props> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <Panel title={t('Appearance')}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-neutral-300">
@@ -157,7 +157,7 @@ export const SettingsDrawer: FC<Props> = ({
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  className="flex h-[36px] w-[36px] items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40 md:h-[36px] md:w-[36px]"
                   title={t('Decrease text size') as string}
                   disabled={fontSize <= FONT_MIN}
                   onClick={() => onFontSizeChange(-1)}
@@ -177,7 +177,7 @@ export const SettingsDrawer: FC<Props> = ({
                 />
 
                 <button
-                  className="flex h-[36px] w-[36px] items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 text-neutral-300 transition-colors hover:bg-gray-500/10 disabled:opacity-40 md:h-[36px] md:w-[36px]"
                   title={t('Increase text size') as string}
                   disabled={fontSize >= FONT_MAX}
                   onClick={() => onFontSizeChange(1)}

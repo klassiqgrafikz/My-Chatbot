@@ -30,7 +30,7 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
-import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
+import { IconArrowBarLeft } from '@tabler/icons-react';
 import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -78,7 +78,12 @@ const Home: React.FC<HomeProps> = ({
     useState<Conversation>();
   const [currentMessage, setCurrentMessage] = useState<Message>();
 
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = localStorage.getItem('showChatbar');
+    if (stored !== null) return stored === 'true';
+    return window.innerWidth >= 640;
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -562,6 +567,7 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleOpenSettings = () => {
+    closeMobileSidebar();
     setShowSettings(true);
   };
 
@@ -608,6 +614,15 @@ const Home: React.FC<HomeProps> = ({
     localStorage.setItem('pluginKeys', JSON.stringify(updatedPluginKeys));
   };
 
+  const closeMobileSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      if (showSidebar) {
+        setShowSidebar(false);
+        localStorage.setItem('showChatbar', 'false');
+      }
+    }
+  };
+
   const handleToggleChatbar = () => {
     if (window.innerWidth < 640) {
       setShowSidebar(!showSidebar);
@@ -636,6 +651,7 @@ const Home: React.FC<HomeProps> = ({
 
   const handleSelectConversation = (conversation: Conversation) => {
     abortInFlightStream();
+    closeMobileSidebar();
 
     setSelectedConversation(conversation);
     saveConversation(conversation);
@@ -715,6 +731,8 @@ const Home: React.FC<HomeProps> = ({
   // CONVERSATION OPERATIONS  --------------------------------------------
 
   const handleNewConversation = () => {
+    closeMobileSidebar();
+
     const lastConversation = conversations[conversations.length - 1];
 
     const newConversation: Conversation = {
@@ -1064,9 +1082,21 @@ const Home: React.FC<HomeProps> = ({
         <meta name="description" content="ChatGPT but better." />
         <meta
           name="viewport"
-          content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta
+          name="theme-color"
+          content={lightMode === 'dark' ? '#202123' : '#ffffff'}
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="Chatbot UI" />
+        <link rel="apple-touch-icon" href="/icons/icon-180.png" />
       </Head>
       {selectedConversation && (
         <main
@@ -1077,55 +1107,49 @@ const Home: React.FC<HomeProps> = ({
               selectedConversation={selectedConversation}
               onNewConversation={handleNewConversation}
               onOpenSettings={handleOpenSettings}
+              onToggleSidebar={handleToggleChatbar}
             />
           </div>
 
-          <div className="flex h-full w-full pt-[48px] sm:pt-0">
-            {showSidebar ? (
-              <div>
-                <Chatbar
-                  loading={messageIsStreaming}
-                  conversations={conversations}
-                  selectedConversation={selectedConversation}
-                  folders={folders}
-                  prompts={prompts}
-                  collapsed={sidebarCollapsed}
-                  onOpenSettings={handleOpenSettings}
-                  onCreateFolder={handleCreateFolder}
-                  onDeleteFolder={handleDeleteFolder}
-                  onUpdateFolder={handleUpdateFolder}
-                  onNewConversation={handleNewConversation}
-                  onSelectConversation={handleSelectConversation}
-                  onDeleteConversation={handleDeleteConversation}
-                  onUpdateConversation={handleUpdateConversation}
-                  onCreatePrompt={handleCreatePrompt}
-                  onUpdatePrompt={handleUpdatePrompt}
-                  onDeletePrompt={handleDeletePrompt}
-                />
+          <div className="relative flex h-full w-full pt-[48px] sm:pt-0">
+            <div
+              onClick={handleToggleChatbar}
+              className={`absolute inset-0 z-10 bg-black/70 transition-opacity duration-300 sm:hidden ${
+                showSidebar ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            ></div>
 
-                <button
-                  className={`fixed top-5 left-[280px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700 ${
-                    sidebarCollapsed ? 'sm:left-[68px]' : 'sm:left-[280px]'
-                  }`}
-                  onClick={handleToggleChatbar}
-                >
-                  <IconArrowBarLeft />
-                </button>
-                <div
-                  onClick={handleToggleChatbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
-                ></div>
-              </div>
-            ) : (
-              <button
-                className="fixed top-2.5 left-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-4 sm:h-8 sm:w-8 sm:text-neutral-700"
-                onClick={handleToggleChatbar}
-              >
-                <IconArrowBarRight />
-              </button>
-            )}
+            <Chatbar
+              loading={messageIsStreaming}
+              conversations={conversations}
+              selectedConversation={selectedConversation}
+              folders={folders}
+              prompts={prompts}
+              collapsed={sidebarCollapsed}
+              mobileOpen={showSidebar}
+              onOpenSettings={handleOpenSettings}
+              onCreateFolder={handleCreateFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onUpdateFolder={handleUpdateFolder}
+              onNewConversation={handleNewConversation}
+              onSelectConversation={handleSelectConversation}
+              onDeleteConversation={handleDeleteConversation}
+              onUpdateConversation={handleUpdateConversation}
+              onCreatePrompt={handleCreatePrompt}
+              onUpdatePrompt={handleUpdatePrompt}
+              onDeletePrompt={handleDeletePrompt}
+            />
 
-            <div className="flex flex-1">
+            <button
+              className={`fixed top-5 left-[280px] z-50 hidden h-8 w-8 hover:text-gray-400 sm:block dark:text-white dark:hover:text-gray-300 ${
+                sidebarCollapsed ? 'sm:left-[68px]' : 'sm:left-[280px]'
+              }`}
+              onClick={handleToggleChatbar}
+            >
+              <IconArrowBarLeft />
+            </button>
+
+            <div className="flex min-w-0 flex-1">
               <Chat
                 conversation={selectedConversation}
                 messageIsStreaming={messageIsStreaming}

@@ -1,0 +1,25 @@
+{
+  "name": "Chatbot UI",
+  "short_name": "Chatbot",
+  "description": "ChatGPT but better. Multi-provider AI chat with folders, prompts and attachments.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#202123",
+  "theme_color": "#202123",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -406,7 +406,7 @@ export const ChatInput: FC<Props> = ({
   }, []);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
+    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 pb-[env(safe-area-inset-bottom)] dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
       <div className="mx-2 mt-4 flex flex-col last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-3xl">
         {messageIsStreaming && (
           <button
@@ -532,7 +532,7 @@ export const ChatInput: FC<Props> = ({
             <div className="flex items-end">
               <div ref={attachMenuRef} className="relative">
                 <button
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-white/10"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-white/10 md:h-9 md:w-9"
                   onClick={() => {
                     setShowPluginSelect(false);
                     setShowPromptList(false);
@@ -551,14 +551,14 @@ export const ChatInput: FC<Props> = ({
                 {showAttachMenu && (
                   <div className="absolute bottom-full left-0 z-30 mb-2 w-52 rounded-lg border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-600 dark:bg-[#343541]">
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2.5 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
                       onClick={() => filesInputRef.current?.click()}
                     >
                       <IconPaperclip size={16} />
                       {t('Upload files')}
                     </button>
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2.5 text-left text-sm text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
                       onClick={() => folderInputRef.current?.click()}
                     >
                       <IconFolder size={16} />
@@ -591,7 +591,7 @@ export const ChatInput: FC<Props> = ({
               </div>
 
               <button
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10 md:h-9 md:w-9"
                 onClick={() => {
                   setShowAttachMenu(false);
                   setShowPluginSelect(!showPluginSelect);
@@ -629,7 +629,7 @@ export const ChatInput: FC<Props> = ({
             />
 
             <button
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-white transition-opacity hover:opacity-80 disabled:opacity-40 dark:bg-white dark:text-black"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-white transition-opacity hover:opacity-80 disabled:opacity-40 dark:bg-white dark:text-black md:h-9 md:w-9"
               onClick={handleSend}
             >
               {messageIsStreaming ? (

@@ -226,7 +226,7 @@ export const ChatMessage: FC<Props> = memo(
 
                     <div className="flex w-full justify-end">
                       <button
-                        className="mt-1 translate-x-[1000px] rounded-md p-1 text-gray-500 hover:text-gray-700 focus:translate-x-0 group-hover:translate-x-0 max-sm:translate-x-0 dark:text-gray-400 dark:hover:text-gray-300"
+                        className="mt-1 translate-x-[1000px] rounded-md p-2 text-gray-500 hover:text-gray-700 focus:translate-x-0 group-hover:translate-x-0 max-sm:translate-x-0 md:p-1 dark:text-gray-400 dark:hover:text-gray-300"
                         onClick={toggleEditing}
                         title={t('Edit message') as string}
                       >
@@ -295,7 +295,7 @@ export const ChatMessage: FC<Props> = memo(
 
                 <div className="mt-2 flex items-center gap-0.5 text-neutral-500">
                   <button
-                    className="rounded-md p-1.5 transition-colors hover:bg-black/5 dark:text-neutral-400 dark:hover:bg-white/10"
+                    className="rounded-md p-2 transition-colors hover:bg-black/5 md:p-1.5 dark:text-neutral-400 dark:hover:bg-white/10"
                     onClick={copyOnClick}
                     title={t('Copy') as string}
                   >
@@ -311,7 +311,7 @@ export const ChatMessage: FC<Props> = memo(
 
                   {onRegenerate && (
                     <button
-                      className="rounded-md p-1.5 transition-colors hover:bg-black/5 dark:text-neutral-400 dark:hover:bg-white/10"
+                      className="rounded-md p-2 transition-colors hover:bg-black/5 md:p-1.5 dark:text-neutral-400 dark:hover:bg-white/10"
                       onClick={onRegenerate}
                       title={t('Regenerate') as string}
                     >
