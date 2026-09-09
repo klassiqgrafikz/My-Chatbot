@@ -122,26 +122,32 @@ export const SettingsDrawer: FC<Props> = ({
 
         <div className="flex-1 overflow-y-auto">
           <Panel title={t('Appearance')}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-neutral-300">
+                {lightModeActive ? (
+                  <IconSun size={16} className="text-neutral-400" />
+                ) : (
+                  <IconMoon size={16} className="text-neutral-400" />
+                )}
+                {t('Dark mode')}
+              </div>
               <button
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                  lightModeActive
-                    ? 'border-white/40 bg-gray-500/10 text-white'
-                    : 'border-white/10 text-neutral-400 hover:bg-gray-500/10'
+                role="switch"
+                aria-checked={!lightModeActive}
+                onClick={() =>
+                  onToggleLightMode(lightModeActive ? 'dark' : 'light')
+                }
+                className={`relative h-[26px] w-[46px] rounded-full transition-colors ${
+                  !lightModeActive ? 'bg-white/90' : 'bg-gray-600'
                 }`}
-                onClick={() => onToggleLightMode('light')}
               >
-                <IconSun size={16} /> {t('Light')}
-              </button>
-              <button
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                  !lightModeActive
-                    ? 'border-white/40 bg-gray-500/10 text-white'
-                    : 'border-white/10 text-neutral-400 hover:bg-gray-500/10'
-                }`}
-                onClick={() => onToggleLightMode('dark')}
-              >
-                <IconMoon size={16} /> {t('Dark')}
+                <span
+                  className={`absolute top-[3px] left-[3px] h-[20px] w-[20px] rounded-full shadow transition-transform ${
+                    !lightModeActive
+                      ? 'translate-x-[20px] bg-black'
+                      : 'translate-x-0 bg-white'
+                  }`}
+                />
               </button>
             </div>
 

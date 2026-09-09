@@ -175,7 +175,7 @@ export const Chat: FC<Props> = memo(
                     Important: Chatbot UI is 100% unaffiliated with OpenAI.
                   </div>
                 </div>
-                <div className="text-center text-gray-500 dark:text-gray-400">
+                <div className="text-center text-gray-500 dark:text-gray-300">
                   <div className="mb-2">
                     Chatbot UI allows you to plug in your API keys to use this
                     UI with any OpenAI-compatible provider.
@@ -255,6 +255,10 @@ export const Chat: FC<Props> = memo(
                         message={message}
                         messageIndex={index}
                         fontSize={fontSize}
+                        isStreaming={
+                          messageIsStreaming &&
+                          index === conversation.messages.length - 1
+                        }
                         onEditMessage={onEditMessage}
                         onRegenerate={handleRegenerate}
                       />

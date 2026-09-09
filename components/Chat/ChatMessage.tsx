@@ -22,12 +22,20 @@ interface Props {
   message: Message;
   messageIndex: number;
   fontSize: number;
+  isStreaming?: boolean;
   onEditMessage: (message: Message, messageIndex: number) => void;
   onRegenerate?: () => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
-  ({ message, messageIndex, fontSize, onEditMessage, onRegenerate }) => {
+  ({
+    message,
+    messageIndex,
+    fontSize,
+    isStreaming,
+    onEditMessage,
+    onRegenerate,
+  }) => {
     const { t } = useTranslation('chat');
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -160,7 +168,7 @@ export const ChatMessage: FC<Props> = memo(
                 ) : (
                   <>
                     <div className="flex w-full justify-end">
-                      <div className="relative max-w-[85%] rounded-[22px] bg-[#ececec] px-4 py-2.5 text-[#0d0d0d] whitespace-pre-wrap">
+                      <div className="relative max-w-[85%] rounded-[22px] bg-[#ececec] px-4 py-2.5 text-[#0d0d0d] whitespace-pre-wrap dark:bg-[#3a3b40] dark:text-white">
                         {message.attachments &&
                           message.attachments.length > 0 && (
                             <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -184,7 +192,7 @@ export const ChatMessage: FC<Props> = memo(
                                 ) : (
                                   <div
                                     key={index}
-                                    className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-xs dark:bg-black/20"
+                                    className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-xs dark:bg-white/10"
                                   >
                                     {attachment.extracted ? (
                                       <IconFileText
@@ -279,6 +287,10 @@ export const ChatMessage: FC<Props> = memo(
                   >
                     {message.content}
                   </MemoizedReactMarkdown>
+
+                  {isStreaming && (
+                    <span className="streaming-caret">▍</span>
+                  )}
                 </div>
 
                 <div className="mt-2 flex items-center gap-0.5 text-neutral-500">
