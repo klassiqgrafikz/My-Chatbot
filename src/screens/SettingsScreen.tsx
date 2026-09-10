@@ -456,7 +456,7 @@ label={
       <Modal visible={providerModal} transparent animationType="slide" onRequestClose={() => setProviderModal(false)}>
         <KeyboardAvoidingView
           style={styles.modalBackdrop}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
         >
           <View style={[styles.modalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>

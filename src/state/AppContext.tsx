@@ -576,7 +576,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         const models = await fetchModelsApi(apiBaseUrl, provider);
         if (!models.length) return false;
         const next = providers.map((p) =>
-          p.id === provider.id ? { ...p, models } : p,
+          p.id === provider.id ? { ...p, ...provider, models } : p,
         );
         setProviders(next);
         localStorage.setItem('providers', JSON.stringify(next));
@@ -587,6 +587,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     [providers, apiBaseUrl],
+  );
+
+  const handleSelectProvider = useCallback(
+    (providerId: string) => {
+      if (!providers.some((p) => p.id === providerId)) return;
+      setSelectedProviderId(providerId);
+      localStorage.setItem('selectedProviderId', providerId);
+      if (selectedConversation) {
+        handleUpdateConversation(selectedConversation, {
+          key: 'providerId',
+          value: providerId,
+        });
+      }
+    },
+    [providers, selectedConversation, handleUpdateConversation],
   );
 
   const handleUpdateProvider = useCallback(
@@ -605,26 +620,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem('providers', JSON.stringify(next));
 
       if (updated.apiKey && updated.models.length === 0) {
-        return fetchProviderModels(updated);
+        const ok = await fetchProviderModels(updated);
+        if (ok) {
+          handleSelectProvider(updated.id);
+        }
+        return ok;
       }
       return true;
     },
-    [providers, fetchProviderModels],
-  );
-
-  const handleSelectProvider = useCallback(
-    (providerId: string) => {
-      if (!providers.some((p) => p.id === providerId)) return;
-      setSelectedProviderId(providerId);
-      localStorage.setItem('selectedProviderId', providerId);
-      if (selectedConversation) {
-        handleUpdateConversation(selectedConversation, {
-          key: 'providerId',
-          value: providerId,
-        });
-      }
-    },
-    [providers, selectedConversation, handleUpdateConversation],
+    [providers, fetchProviderModels, handleSelectProvider],
   );
 
   const handleAddProvider = useCallback(
@@ -641,11 +645,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setProviders(next);
       localStorage.setItem('providers', JSON.stringify(next));
       if (apiKey) {
-        return fetchProviderModels(provider);
+        const ok = await fetchProviderModels(provider);
+        if (ok) {
+          handleSelectProvider(provider.id);
+        }
+        return ok;
       }
       return true;
     },
-    [providers, fetchProviderModels],
+    [providers, fetchProviderModels, handleSelectProvider],
   );
 
   const handleRemoveProvider = useCallback(

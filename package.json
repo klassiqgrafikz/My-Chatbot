@@ -8,6 +8,7 @@
     "@react-navigation/drawer": "^7.13.10",
     "@react-navigation/native": "^7.3.18",
     "expo": "~57.0.21",
+    "expo-android-keyboard-fix": "^2.1.0",
     "expo-audio": "~57.0.4",
     "expo-document-picker": "~57.0.1",
     "expo-file-system": "~57.0.6",

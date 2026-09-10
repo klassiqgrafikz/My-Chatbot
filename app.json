@@ -2,7 +2,7 @@
   "expo": {
     "name": "Chatbot",
     "slug": "chatbot",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -44,7 +44,8 @@
       "expo-audio",
       "expo-secure-store",
       "expo-localization",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-android-keyboard-fix"
     ],
     "extra": {
       "eas": {
