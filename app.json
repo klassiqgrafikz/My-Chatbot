@@ -1,15 +1,27 @@
 {
   "expo": {
-    "name": "chatbot-native",
-    "slug": "chatbot-native",
+    "name": "Chatbot",
+    "slug": "chatbot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "scheme": "chatbot",
+    "backgroundColor": "#202123",
+    "androidStatusBar": {
+      "backgroundColor": "#202123"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#202123"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.klassiqgrafikz.chatbot",
+      "permissions": ["RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +32,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-audio",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-splash-screen"
+    ]
   }
 }
