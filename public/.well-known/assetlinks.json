@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.vercel.chatbot_ui_legacy_seven.twa",
+    "sha256_cert_fingerprints": ["71:E5:4B:1C:D2:72:AD:CE:DF:21:86:96:6D:0F:99:BC:3D:47:86:8A:35:C2:0D:0D:67:6B:0C:AF:7E:98:FC:32"]
+  }
+}]
