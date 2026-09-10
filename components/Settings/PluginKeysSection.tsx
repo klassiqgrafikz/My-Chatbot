@@ -18,7 +18,7 @@ export const PluginKeysSection: FC<Props> = ({
 }) => {
   const { t } = useTranslation('sidebar');
 
-  const upsertKey = (key: 'GOOGLE_API_KEY' | 'GOOGLE_CSE_ID', value: string) => {
+  const upsertKey = (key: 'TAVILY_API_KEY', value: string) => {
     const pluginKey = pluginKeys.find(
       (p) => p.pluginId === PluginID.GOOGLE_SEARCH,
     );
@@ -34,58 +34,33 @@ export const PluginKeysSection: FC<Props> = ({
         }),
       });
     } else {
-      const requiredKeys =
-        key === 'GOOGLE_API_KEY'
-          ? [
-              { key: 'GOOGLE_API_KEY', value },
-              { key: 'GOOGLE_CSE_ID', value: '' },
-            ]
-          : [
-              { key: 'GOOGLE_API_KEY', value: '' },
-              { key: 'GOOGLE_CSE_ID', value },
-            ];
-
       onPluginKeyChange({
         pluginId: PluginID.GOOGLE_SEARCH,
-        requiredKeys,
+        requiredKeys: [{ key: 'TAVILY_API_KEY', value }],
       });
     }
   };
 
   const apiKey = pluginKeys
     .find((p) => p.pluginId === PluginID.GOOGLE_SEARCH)
-    ?.requiredKeys.find((k) => k.key === 'GOOGLE_API_KEY')?.value;
-
-  const cseId = pluginKeys
-    .find((p) => p.pluginId === PluginID.GOOGLE_SEARCH)
-    ?.requiredKeys.find((k) => k.key === 'GOOGLE_CSE_ID')?.value;
+    ?.requiredKeys.find((k) => k.key === 'TAVILY_API_KEY')?.value;
 
   return (
     <div>
       <p className="mb-2 text-[12px] leading-relaxed text-neutral-400">
         {t(
-          'Enter your Google API Key and Google CSE ID to enable the Google Search plugin.',
+          'Enter your Tavily API key to enable the Web Search plugin. It lets the AI search the live web and answer with sources.',
         )}
       </p>
 
       <div className="text-[13px] font-semibold text-white">
-        {t('Google API Key')}
+        {t('Tavily API Key')}
       </div>
       <input
         className={inputClassName}
         type="password"
         value={apiKey || ''}
-        onChange={(e) => upsertKey('GOOGLE_API_KEY', e.target.value)}
-      />
-
-      <div className="mt-4 text-[13px] font-semibold text-white">
-        {t('Google CSE ID')}
-      </div>
-      <input
-        className={inputClassName}
-        type="password"
-        value={cseId || ''}
-        onChange={(e) => upsertKey('GOOGLE_CSE_ID', e.target.value)}
+        onChange={(e) => upsertKey('TAVILY_API_KEY', e.target.value)}
       />
 
       <button
@@ -99,7 +74,7 @@ export const PluginKeysSection: FC<Props> = ({
           }
         }}
       >
-        {t('Clear Google Search Plugin Keys')}
+        {t('Clear Web Search Plugin Keys')}
       </button>
     </div>
   );

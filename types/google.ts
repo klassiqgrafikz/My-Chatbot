@@ -1,8 +1,7 @@
 import { ChatBody, Message } from './chat';
 
 export interface GoogleBody extends ChatBody {
-  googleAPIKey: string;
-  googleCSEId: string;
+  tavilyApiKey: string;
 }
 
 export interface GoogleResponse {
@@ -12,8 +11,5 @@ export interface GoogleResponse {
 export interface GoogleSource {
   title: string;
   link: string;
-  displayLink: string;
-  snippet: string;
-  image: string;
-  text: string;
+  content: string;
 }

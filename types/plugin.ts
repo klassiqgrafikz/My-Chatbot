@@ -16,7 +16,7 @@ export enum PluginID {
 }
 
 export enum PluginName {
-  GOOGLE_SEARCH = 'Google Search',
+  GOOGLE_SEARCH = 'Web Search',
 }
 
 export const Plugins: Record<PluginID, Plugin> = {
@@ -25,11 +25,7 @@ export const Plugins: Record<PluginID, Plugin> = {
     name: PluginName.GOOGLE_SEARCH,
     requiredKeys: [
       {
-        key: 'GOOGLE_API_KEY',
-        value: '',
-      },
-      {
-        key: 'GOOGLE_CSE_ID',
+        key: 'TAVILY_API_KEY',
         value: '',
       },
     ],

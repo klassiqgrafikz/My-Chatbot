@@ -1,84 +1,44 @@
 import { Message } from '@/types/chat';
 import { GoogleBody, GoogleSource } from '@/types/google';
 import { OPENAI_API_HOST } from '@/utils/app/const';
-import { cleanSourceText } from '@/utils/server/google';
-import { Readability } from '@mozilla/readability';
 import endent from 'endent';
-import jsdom, { JSDOM } from 'jsdom';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
   try {
-    const { messages, key, model, googleAPIKey, googleCSEId } =
-      req.body as GoogleBody;
+    const { messages, key, model, tavilyApiKey } = req.body as GoogleBody;
 
     const userMessage = messages[messages.length - 1];
 
-    const googleRes = await fetch(
-      `https://customsearch.googleapis.com/customsearch/v1?key=${
-        googleAPIKey ? googleAPIKey : process.env.GOOGLE_API_KEY
-      }&cx=${
-        googleCSEId ? googleCSEId : process.env.GOOGLE_CSE_ID
-      }&q=${userMessage.content.trim()}&num=5`,
-    );
+    const tavilyRes = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        api_key: tavilyApiKey ? tavilyApiKey : process.env.TAVILY_API_KEY,
+        query: userMessage.content.trim(),
+        max_results: 5,
+        search_depth: 'basic',
+      }),
+    });
 
-    const googleData = await googleRes.json();
+    const tavilyData = await tavilyRes.json();
 
-    const sources: GoogleSource[] = googleData.items.map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      displayLink: item.displayLink,
-      snippet: item.snippet,
-      image: item.pagemap?.cse_image?.[0]?.src,
-      text: '',
-    }));
-
-    const sourcesWithText: any = await Promise.all(
-      sources.map(async (source) => {
-        try {
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timed out')), 5000),
-          );
-
-          const res = (await Promise.race([
-            fetch(source.link),
-            timeoutPromise,
-          ])) as any;
-
-          // if (res) {
-          const html = await res.text();
-
-          const virtualConsole = new jsdom.VirtualConsole();
-          virtualConsole.on('error', (error) => {
-            if (!error.message.includes('Could not parse CSS stylesheet')) {
-              console.error(error);
-            }
-          });
-
-          const dom = new JSDOM(html, { virtualConsole });
-          const doc = dom.window.document;
-          const parsed = new Readability(doc).parse();
-
-          if (parsed) {
-            let sourceText = cleanSourceText(parsed.textContent);
-
-            return {
-              ...source,
-              // TODO: switch to tokens
-              text: sourceText.slice(0, 2000),
-            } as GoogleSource;
-          }
-          // }
-
-          return null;
-        } catch (error) {
-          console.error(error);
-          return null;
-        }
+    const sources: GoogleSource[] = (tavilyData.results || []).map(
+      (item: any) => ({
+        title: item.title,
+        link: item.url,
+        content: item.content || '',
       }),
     );
 
-    const filteredSources: GoogleSource[] = sourcesWithText.filter(Boolean);
+    if (!sources.length) {
+      return res.status(200).json({
+        answer:
+          'I could not find any relevant results online for that query. Try rephrasing it, or ask me again without web search enabled.',
+      });
+    }
 
     const answerPrompt = endent`
     Provide me with the information I requested. Use the sources to provide an accurate response. Respond in markdown format. Cite the sources you used as a markdown link as you use them at the end of each sentence by number of the source (ex: [[1]](link.com)). Provide an accurate response and then stop. Today's date is ${new Date().toLocaleDateString()}.
@@ -96,10 +56,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
     ${userMessage.content.trim()}
 
     Sources:
-    ${filteredSources.map((source) => {
+    ${sources.map((source) => {
       return endent`
       ${source.title} (${source.link}):
-      ${source.text}
+      ${source.content}
       `;
     })}
 
@@ -133,7 +93,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
     });
 
     const { choices: choices2 } = await answerRes.json();
-    const answer = choices2[0].message.content;
+    const answer = choices2[0].message?.content || sources[0].content;
 
     res.status(200).json({ answer });
   } catch (error) {

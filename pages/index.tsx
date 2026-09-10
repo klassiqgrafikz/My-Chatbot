@@ -181,12 +181,9 @@ const Home: React.FC<HomeProps> = ({
     } else {
       body = JSON.stringify({
         ...chatBody,
-        googleAPIKey: pluginKeys
+        tavilyApiKey: pluginKeys
           .find((key) => key.pluginId === 'google-search')
-          ?.requiredKeys.find((key) => key.key === 'GOOGLE_API_KEY')?.value,
-        googleCSEId: pluginKeys
-          .find((key) => key.pluginId === 'google-search')
-          ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
+          ?.requiredKeys.find((key) => key.key === 'TAVILY_API_KEY')?.value,
       });
     }
 
@@ -1237,10 +1234,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
 
   let serverSidePluginKeysSet = false;
 
-  const googleApiKey = process.env.GOOGLE_API_KEY;
-  const googleCSEId = process.env.GOOGLE_CSE_ID;
-
-  if (googleApiKey && googleCSEId) {
+  if (process.env.TAVILY_API_KEY) {
     serverSidePluginKeysSet = true;
   }
 
