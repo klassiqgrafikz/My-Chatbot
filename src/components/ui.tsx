@@ -158,18 +158,20 @@ export const PrimaryButton: React.FC<{
 export const GhostButton: React.FC<{
   title: string;
   onPress: () => void;
+  disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
-}> = ({ title, onPress, style, textStyle }) => {
+}> = ({ title, onPress, disabled, style, textStyle }) => {
   const { theme } = useApp();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.ghostButton,
         {
           borderColor: theme.border,
-          opacity: pressed ? 0.7 : 1,
+          opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
         },
         style,
       ]}

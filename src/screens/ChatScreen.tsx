@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useApp } from '@/state/AppContext';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { MessageRow } from '@/components/MessageRow';
@@ -72,10 +81,13 @@ export const ChatScreen: React.FC = () => {
   }
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.background }]}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
-      <FlatList
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={(_, i) => String(i)}
@@ -143,7 +155,8 @@ export const ChatScreen: React.FC = () => {
       )}
 
       <Composer />
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

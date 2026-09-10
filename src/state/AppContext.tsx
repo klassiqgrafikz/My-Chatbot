@@ -79,11 +79,15 @@ interface AppContextValue {
   updatePrompt: (prompt: Prompt) => void;
   deletePrompt: (promptId: string) => void;
 
-  handleUpdateProvider: (provider: AIProvider) => void;
+  handleUpdateProvider: (provider: AIProvider) => Promise<boolean>;
   handleSelectProvider: (providerId: string) => void;
-  handleAddProvider: (name: string, apiHost: string, apiKey: string) => void;
+  handleAddProvider: (
+    name: string,
+    apiHost: string,
+    apiKey: string,
+  ) => Promise<boolean>;
   handleRemoveProvider: (providerId: string) => void;
-  fetchProviderModels: (provider: AIProvider) => Promise<void>;
+  fetchProviderModels: (provider: AIProvider) => Promise<boolean>;
 
   setLightMode: (mode: ThemeMode) => void;
   setChatFontSize: (px: number) => void;
@@ -566,8 +570,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     [prompts],
   );
 
+  const fetchProviderModels = useCallback(
+    async (provider: AIProvider): Promise<boolean> => {
+      try {
+        const models = await fetchModelsApi(apiBaseUrl, provider);
+        if (!models.length) return false;
+        const next = providers.map((p) =>
+          p.id === provider.id ? { ...p, models } : p,
+        );
+        setProviders(next);
+        localStorage.setItem('providers', JSON.stringify(next));
+        return true;
+      } catch (error) {
+        Alert.alert('Error', (error as Error).message);
+        return false;
+      }
+    },
+    [providers, apiBaseUrl],
+  );
+
   const handleUpdateProvider = useCallback(
-    (provider: AIProvider) => {
+    async (provider: AIProvider): Promise<boolean> => {
       const prev = providers.find((p) => p.id === provider.id);
       const keyChanged = prev ? prev.apiKey !== provider.apiKey : true;
       const hostChanged = prev ? prev.apiHost !== provider.apiHost : true;
@@ -582,10 +605,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem('providers', JSON.stringify(next));
 
       if (updated.apiKey && updated.models.length === 0) {
-        void fetchProviderModels(updated);
+        return fetchProviderModels(updated);
       }
+      return true;
     },
-    [providers, apiBaseUrl],
+    [providers, fetchProviderModels],
   );
 
   const handleSelectProvider = useCallback(
@@ -604,7 +628,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const handleAddProvider = useCallback(
-    (name: string, apiHost: string, apiKey: string) => {
+    async (name: string, apiHost: string, apiKey: string): Promise<boolean> => {
       const provider: AIProvider = {
         id: uid(),
         name,
@@ -617,10 +641,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setProviders(next);
       localStorage.setItem('providers', JSON.stringify(next));
       if (apiKey) {
-        void fetchProviderModels(provider);
+        return fetchProviderModels(provider);
       }
+      return true;
     },
-    [providers, apiBaseUrl],
+    [providers, fetchProviderModels],
   );
 
   const handleRemoveProvider = useCallback(
@@ -635,23 +660,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     [providers, selectedProviderId],
-  );
-
-  const fetchProviderModels = useCallback(
-    async (provider: AIProvider) => {
-      try {
-        const models = await fetchModelsApi(apiBaseUrl, provider);
-        if (!models.length) return;
-        const next = providers.map((p) =>
-          p.id === provider.id ? { ...p, models } : p,
-        );
-        setProviders(next);
-        localStorage.setItem('providers', JSON.stringify(next));
-      } catch (error) {
-        Alert.alert('Error', (error as Error).message);
-      }
-    },
-    [providers, apiBaseUrl],
   );
 
   const setLightMode = useCallback((mode: ThemeMode) => {

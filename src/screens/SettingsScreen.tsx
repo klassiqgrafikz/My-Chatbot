@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -83,6 +85,8 @@ export const SettingsScreen: React.FC = () => {
     [],
   );
 
+  const [connecting, setConnecting] = useState(false);
+
   const saveUrl = () => {
     const trimmed = urlDraft.trim().replace(/\/+$/, '');
     if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
@@ -126,7 +130,8 @@ export const SettingsScreen: React.FC = () => {
     setProviderModal(true);
   };
 
-  const saveProvider = () => {
+  const saveProvider = async () => {
+    if (connecting) return;
     if (!editName.trim()) {
       Alert.alert('Invalid provider', 'Name is required.');
       return;
@@ -136,17 +141,22 @@ export const SettingsScreen: React.FC = () => {
       Alert.alert('Invalid host', 'API host must be an http(s) URL.');
       return;
     }
-    if (editingProvider) {
-      handleUpdateProvider({
-        ...editingProvider,
-        name: editName.trim(),
-        apiHost,
-        apiKey: editKey.trim(),
-      });
-    } else {
-      handleAddProvider(editName.trim(), apiHost, editKey.trim());
+    setConnecting(true);
+    try {
+      const ok = editingProvider
+        ? await handleUpdateProvider({
+            ...editingProvider,
+            name: editName.trim(),
+            apiHost,
+            apiKey: editKey.trim(),
+          })
+        : await handleAddProvider(editName.trim(), apiHost, editKey.trim());
+      if (ok) {
+        setProviderModal(false);
+      }
+    } finally {
+      setConnecting(false);
     }
-    setProviderModal(false);
   };
 
   const reloadVoices = async () => {
@@ -444,7 +454,10 @@ label={
       </Modal>
 
       <Modal visible={providerModal} transparent animationType="slide" onRequestClose={() => setProviderModal(false)}>
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={[styles.modalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
               {editingProvider ? 'Edit provider' : 'Add provider'}
@@ -474,12 +487,19 @@ label={
               autoCorrect={false}
               style={{ marginBottom: 16 }}
             />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <GhostButton title="Cancel" onPress={() => setProviderModal(false)} style={{ flex: 1 }} />
-              <PrimaryButton title="Save" onPress={saveProvider} style={{ flex: 1 }} />
-            </View>
+            <PrimaryButton
+              title={editingProvider ? 'Save and Connect' : 'Add and Connect'}
+              onPress={() => void saveProvider()}
+              loading={connecting}
+              style={{ marginBottom: 10 }}
+            />
+            <GhostButton
+              title="Cancel"
+              onPress={() => setProviderModal(false)}
+              disabled={connecting}
+            />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={voiceModal} transparent animationType="slide" onRequestClose={() => setVoiceModal(false)}>

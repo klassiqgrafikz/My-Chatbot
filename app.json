@@ -2,12 +2,13 @@
   "expo": {
     "name": "Chatbot",
     "slug": "chatbot",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "chatbot",
     "backgroundColor": "#202123",
+    "androidSoftwareKeyboardLayoutMode": "resize",
     "androidStatusBar": {
       "backgroundColor": "#202123"
     },
@@ -21,7 +22,13 @@
     },
     "android": {
       "package": "com.klassiqgrafikz.chatbot",
-      "permissions": ["RECORD_AUDIO"],
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -38,6 +45,12 @@
       "expo-secure-store",
       "expo-localization",
       "expo-splash-screen"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "314a3ea9-97a7-4d23-bc19-2ab9dc9a5395"
+      }
+    },
+    "owner": "klassiq1975"
   }
 }

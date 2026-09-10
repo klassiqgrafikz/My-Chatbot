@@ -172,9 +172,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   copyBtn: {
-    position: 'absolute',
-    bottom: -6,
-    left: 0,
+    alignSelf: 'flex-start',
     padding: 6,
+    marginTop: 8,
   },
 });

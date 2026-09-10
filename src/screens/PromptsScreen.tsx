@@ -146,15 +146,13 @@ export const PromptsScreen: React.FC = () => {
               style={{ minHeight: 120, textAlignVertical: 'top' }}
             />
             <View style={styles.modalRow}>
-              <GhostButton
-                title="Cancel"
-                onPress={() => setModalOpen(false)}
-                style={{ flex: 1 }}
-              />
               <PrimaryButton
                 title="Save"
                 onPress={save}
-                style={{ flex: 1 }}
+              />
+              <GhostButton
+                title="Cancel"
+                onPress={() => setModalOpen(false)}
               />
             </View>
           </View>
@@ -208,7 +206,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     marginTop: 14,
   },
