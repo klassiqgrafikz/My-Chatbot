@@ -19,7 +19,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
         api_key: tavilyApiKey ? tavilyApiKey : process.env.TAVILY_API_KEY,
         query: userMessage.content.trim(),
         max_results: 5,
-        search_depth: 'basic',
+        search_depth: 'advanced',
       }),
     });
 
