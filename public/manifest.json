@@ -1,7 +1,7 @@
 {
-  "name": "Chatbot UI",
-  "short_name": "Chatbot",
-  "description": "ChatGPT but better. Multi-provider AI chat with folders, prompts and attachments.",
+  "name": "Klassiq AI",
+  "short_name": "Klassiq AI",
+  "description": "Klassiq AI - multi-provider AI chat with live web search, folders, prompts and attachments.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
