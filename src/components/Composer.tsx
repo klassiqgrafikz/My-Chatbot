@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -20,6 +21,7 @@ const TEXT_MIME =
   /^(text\/|application\/(json|xml|csv|javascript|typescript|rtf|sql|yaml|toml)|application\/x-)/;
 
 export const Composer: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { theme, handleSend, loading: isGenerating, handleStop, voice: voiceSettings } = useApp();
   const voice = useVoiceOutput();
   const [input, setInput] = useState('');
@@ -116,7 +118,11 @@ export const Composer: React.FC = () => {
     <View
       style={[
         styles.wrap,
-        { borderTopColor: theme.border, backgroundColor: theme.background },
+        {
+          borderTopColor: theme.border,
+          backgroundColor: theme.background,
+          paddingBottom: Math.max(insets.bottom, 12),
+        },
       ]}
     >
       {attachments.length > 0 && (
