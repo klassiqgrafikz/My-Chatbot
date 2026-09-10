@@ -1,12 +1,13 @@
 import { Message } from '@/types/chat';
 import { GoogleBody, GoogleSource } from '@/types/google';
-import { OPENAI_API_HOST } from '@/utils/app/const';
+import { getProviderApiHost, getProviderEnvKey } from '@/types/provider';
 import endent from 'endent';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
   try {
-    const { messages, key, model, tavilyApiKey } = req.body as GoogleBody;
+    const { messages, model, provider, key, tavilyApiKey } =
+      req.body as GoogleBody;
 
     const userMessage = messages[messages.length - 1];
 
@@ -68,11 +69,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
 
     const answerMessage: Message = { role: 'user', content: answerPrompt };
 
-    const answerRes = await fetch(`${OPENAI_API_HOST}/v1/chat/completions`, {
+    const apiKey =
+      key || provider?.apiKey || getProviderEnvKey(provider?.id) || '';
+
+    if (!apiKey) {
+      return res.status(500).json({
+        message:
+          'No API key available for the selected provider. Set your API key in the sidebar or add a server environment variable.',
+      });
+    }
+
+    const apiHost = getProviderApiHost(
+      provider || { id: 'openai', apiHost: '' },
+    );
+
+    const answerRes = await fetch(`${apiHost}/chat/completions`, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
-        ...(process.env.OPENAI_ORGANIZATION && {
+        Authorization: `Bearer ${apiKey}`,
+        ...(provider?.id === 'openai' && process.env.OPENAI_ORGANIZATION && {
           'OpenAI-Organization': process.env.OPENAI_ORGANIZATION,
         }),
       },
@@ -87,16 +102,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<any>) => {
           answerMessage,
         ],
         max_tokens: 1000,
-        temperature: 1,
+        temperature: 0.7,
         stream: false,
       }),
     });
 
-    const { choices: choices2 } = await answerRes.json();
-    const answer = choices2[0].message?.content || sources[0].content;
+    if (!answerRes.ok) {
+      const errorText = (await answerRes.text()).slice(0, 300);
+      return res.status(502).json({
+        message: `The AI provider returned an error while answering the search results: ${errorText}`,
+      });
+    }
+
+    const { choices } = await answerRes.json();
+    const answer =
+      choices[0]?.message?.content || sources[0].content || 'No answer.';
 
     res.status(200).json({ answer });
   } catch (error) {
+    console.error(error);
     return new Response('Error', { status: 500 });
   }
 };
